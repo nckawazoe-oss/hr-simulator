@@ -677,6 +677,40 @@ body{
 .net-pos{color:var(--green)!important;font-weight:600;}
 .net-neg{color:var(--red)!important;font-weight:600;}
 .net-zero{color:var(--text-dim)!important;}
+
+/* ── KPI ACCORDION ── */
+.kpi-accordion-btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.kpi-accordion-btn .acc-arrow {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+  color: var(--gold);
+}
+.kpi-accordion-btn.open .acc-arrow {
+  transform: rotate(180deg);
+}
+.kpi-accordion-body {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+.kpi-accordion-body.open {
+  max-height: 400px;
+  opacity: 1;
+}
 </style>
 </head>
 <body>
@@ -725,8 +759,16 @@ body{
       <button class="exec-btn primary" onclick="renderGrid()">再計算</button>
       <label class="toggle ctrl-pill"><input type="checkbox" id="g-shokutaku" onchange="renderGrid()"> 嘱託含む</label>
     </div>
-    <!-- KPI概況 -->
-    <div id="g-kpi-row" class="grid-kpi-row"></div>
+    <!-- KPI概況（アコーディオン） -->
+    <div id="g-kpi-accordion">
+      <button class="kpi-accordion-btn" id="g-kpi-toggle" onclick="toggleKpiAccordion()">
+        <span id="g-kpi-scope-label">【全社】2026年時点の概況</span>
+        <span class="acc-arrow">▼</span>
+      </button>
+      <div class="kpi-accordion-body" id="g-kpi-body">
+        <div id="g-kpi-row" class="grid-kpi-row" style="margin-bottom:8px;"></div>
+      </div>
+    </div>
     <!-- アラート -->
     <div id="g-alert-area"></div>
     <!-- フィルター＋凡例行 -->
@@ -960,6 +1002,9 @@ function renderGrid(){
     +'<div class="grid-kpi gk-young"><div class="grid-kpi-label">30歳未満</div><div class="grid-kpi-val">'+under30+'<span class="gu">名</span></div><div class="grid-kpi-sub">'+(activeState.length?Math.round(under30/activeState.length*100):0)+'%</div></div>'
     +'<div class="grid-kpi gk-old"><div class="grid-kpi-label">50歳以上の割合</div><div class="grid-kpi-val">'+over50pct+'<span class="gu">%</span></div><div class="grid-kpi-sub">'+(over50pct>=40?'⚠ 高齢化リスク':'適正範囲')+'</div></div>';
   document.getElementById('g-kpi-row').innerHTML=kpiHtml;
+  // アコーディオンのタイトルラベルも更新
+  const scopeEl=document.getElementById('g-kpi-scope-label');
+  if(scopeEl) scopeEl.textContent=scopeLabel+' '+year+'年時点の概況';
 
   // Build aggregate table
   const GBC_BD=['#2c5f8a','#2e7d5e','#7b3f00','#6d2b8a','#1a5a5a','#8a2c2c','#4a6b2c','#2c4a8a','#8a5c2c','#2c8a6b','#6b4a8a','#8a7b2c'];
@@ -1202,6 +1247,13 @@ function showTab(name,el){
   if(name==='hiring'){buildHiringTable();renderForecast();}
 }
 
+
+function toggleKpiAccordion(){
+  const btn=document.getElementById('g-kpi-toggle');
+  const body=document.getElementById('g-kpi-body');
+  btn.classList.toggle('open');
+  body.classList.toggle('open');
+}
 function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
 
 
