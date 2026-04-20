@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>人員構成シミュレーター｜経営ダッシュボード</title>
+<style>
+
+:root {
+  --ink: #0f0e0c;
+  --paper: #f7f5f0;
+  --cream: #ede9e0;
+  --gold: #b8972a;
+  --gold-light: #d4af50;
+  --gold-pale: #f5edd6;
+  --slate: #2d3142;
+  --slate-mid: #4a5068;
+  --red-alert: #c0392b;
+  --red-pale: #fdf0ee;
+  --blue-mid: #2c5f8a;
+  --blue-pale: #eaf1f8;
+  --green-mid: #2e7d5e;
+  --green-pale: #eaf5f0;
+  --shadow: 0 2px 16px rgba(15,14,12,0.08);
+  --shadow-lg: 0 8px 40px rgba(15,14,12,0.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','ヒラギノ角ゴ ProN','Yu Gothic','游ゴシック',sans-serif;background:var(--paper);color:var(--ink);font-size:13px;min-height:100vh;}
+
+/* ── HEADER ── */
+.exec-header{
+  background:var(--slate);
+  padding:0 2.5rem;
+  display:flex;align-items:center;justify-content:space-between;
+  height:64px;
+  position:sticky;top:0;z-index:50;
+  border-bottom:2px solid var(--gold);
+}
+.header-brand{display:flex;align-items:center;gap:14px;}
+.header-logo{width:32px;height:32px;border:1.5px solid var(--gold);border-radius:4px;display:flex;align-items:center;justify-content:center;}
+.header-logo svg{width:18px;height:18px;fill:var(--gold);}
+.header-title{font-family:Georgia,serif;font-size:15px;font-weight:600;color:#fff;letter-spacing:0.04em;}
+.header-sub{font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:0.06em;margin-top:1px;}
+.header-meta{font-size:11px;color:rgba(255,255,255,0.45);font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;letter-spacing:0.04em;}
+
+/* ── TABS ── */
+.tab-bar{background:var(--cream);border-bottom:1px solid #ddd;padding:0 2.5rem;display:flex;gap:0;}
+.tab-btn{padding:12px 22px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--slate-mid);border-bottom:2px solid transparent;letter-spacing:0.04em;transition:all 0.15s;}
+.tab-btn:hover{color:var(--slate);}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:700;}
+
+/* ── MAIN LAYOUT ── */
+.main{padding:2rem 2.5rem;max-width:1600px;margin:0 auto;}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:1.75rem;}
+.kpi-card{background:white;border:1px solid #e2ddd4;border-radius:10px;padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.c-total::before{background:var(--slate);}
+.kpi-card.c-avg::before{background:var(--gold);}
+.kpi-card.c-retire::before{background:var(--red-alert);}
+.kpi-card.c-young::before{background:var(--green-mid);}
+.kpi-card.c-shortage::before{background:var(--blue-mid);}
+.kpi-label{font-size:10px;color:#888;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px;}
+.kpi-val{font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1;}
+.kpi-sub{font-size:10px;color:#aaa;margin-top:5px;}
+.kpi-badge{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;margin-top:4px;}
+.badge-warn{background:var(--red-pale);color:var(--red-alert);}
+.badge-ok{background:var(--green-pale);color:var(--green-mid);}
+
+/* ── PANEL / CARD ── */
+.panel{background:white;border:1px solid #e2ddd4;border-radius:12px;margin-bottom:1.5rem;overflow:hidden;}
+.panel-head{padding:14px 20px;border-bottom:1px solid #f0ece4;display:flex;align-items:center;justify-content:space-between;background:#faf9f6;}
+.panel-title{font-family:Georgia,serif;font-size:14px;font-weight:600;color:var(--slate);letter-spacing:0.02em;display:flex;align-items:center;gap:8px;}
+.panel-title .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+.panel-body{padding:20px;}
+
+/* ── CONTROLS ── */
+.ctrl-strip{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.year-display{font-family:Georgia,serif;font-size:26px;font-weight:700;color:var(--slate);min-width:80px;}
+.year-note{font-size:11px;color:#aaa;margin-top:2px;}
+.slider-group{display:flex;align-items:center;gap:8px;font-size:11px;color:#aaa;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;}
+input[type=range]{accent-color:var(--gold);width:140px;cursor:pointer;}
+.ctrl-pill{display:flex;align-items:center;gap:6px;background:var(--cream);border-radius:6px;padding:5px 10px;font-size:11px;color:#666;}
+.ctrl-pill input[type=number]{width:40px;font-size:11px;padding:2px 4px;border:1px solid #ccc;border-radius:4px;text-align:center;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;background:white;}
+.exec-btn{font-size:11px;padding:5px 14px;border-radius:6px;cursor:pointer;border:1px solid var(--gold);background:white;color:var(--gold);font-weight:500;transition:all 0.15s;}
+.exec-btn:hover{background:var(--gold);color:white;}
+.exec-btn.primary{background:var(--gold);color:white;}
+.exec-btn.primary:hover{background:#9a7d22;}
+label.toggle{display:flex;align-items:center;gap:5px;font-size:11px;color:#666;cursor:pointer;}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+.filter-label{font-size:11px;color:#888;letter-spacing:0.04em;}
+select{font-size:12px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;background:white;color:var(--ink);cursor:pointer;}
+
+/* ── AGGREGATE TABLE ── */
+.agg-table{width:100%;border-collapse:collapse;font-size:12px;}
+.agg-table thead th{background:var(--slate);color:rgba(255,255,255,0.85);font-weight:500;padding:8px 10px;font-size:10px;letter-spacing:0.06em;text-align:center;border:1px solid rgba(255,255,255,0.1);}
+.agg-table thead th.dept-th{text-align:left;min-width:90px;}
+.agg-table thead th.sub-th{text-align:left;min-width:100px;}
+.agg-table tbody tr:hover{background:#faf8f3;}
+.agg-table tbody td{padding:7px 10px;border:1px solid #ede9e0;text-align:center;vertical-align:middle;}
+.agg-table tbody td.dept-cell{font-weight:600;font-size:11px;color:white;text-align:center;writing-mode:vertical-lr;letter-spacing:2px;padding:6px 4px;}
+.agg-table tbody td.sub-cell{font-size:11px;color:var(--slate);text-align:left;font-weight:500;}
+.agg-table tbody td.sub-cell.indent{padding-left:20px;color:var(--slate-mid);}
+.count-cell{position:relative;}
+.count-badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;border-radius:4px;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-weight:500;font-size:11px;padding:0 6px;}
+.cb-normal{background:#dbeafe;color:#1e40af;}
+.cb-warn{background:#fef3c7;color:#92400e;outline:1px solid #f59e0b;}
+.cb-vacant{background:var(--red-pale);color:var(--red-alert);border:1.5px dashed #f87171;}
+.cb-zero{color:#ccc;font-size:10px;}
+.role-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;margin:1px;font-weight:500;white-space:nowrap;}
+.rt-executive{background:#4a1b0c;color:#fff;}
+.rt-bucho{background:#1e3a5f;color:#fff;}
+.rt-kacho{background:#1a5276;color:#fff;}
+.rt-kakaricho{background:#0e6655;color:#fff;}
+.rt-general{background:#e8e8e8;color:#555;}
+
+/* ── AGE BAR CHART ── */
+.age-chart-wrap{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.age-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.age-bar-label{font-size:11px;color:#888;width:55px;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;}
+.age-bar-track{flex:1;height:18px;background:var(--cream);border-radius:3px;overflow:hidden;}
+.age-bar-fill{height:100%;border-radius:3px;transition:width 0.5s ease;}
+.age-bar-cnt{font-size:11px;font-weight:500;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;width:38px;text-align:right;}
+
+/* ── RETIRE TIMELINE ── */
+.retire-timeline{display:flex;gap:12px;flex-wrap:wrap;}
+.retire-year-card{flex:1;min-width:140px;background:var(--cream);border-radius:10px;padding:14px 16px;border:1px solid #e0dbd0;}
+.retire-year-label{font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-size:11px;color:#888;margin-bottom:4px;}
+.retire-year-count{font-family:Georgia,serif;font-size:24px;font-weight:700;color:var(--red-alert);margin-bottom:8px;}
+.retire-chips{display:flex;flex-wrap:wrap;gap:3px;}
+.retire-chip{font-size:10px;background:white;border-radius:4px;padding:2px 8px;color:#666;border:1px solid #ddd;}
+
+/* ── HIRING PLAN ── */
+.hiring-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.hiring-table{width:100%;border-collapse:collapse;font-size:12px;}
+.hiring-table th{background:var(--cream);padding:7px 10px;font-size:10px;font-weight:600;color:#666;letter-spacing:0.05em;border:1px solid #e0dbd0;text-align:center;}
+.hiring-table td{padding:6px 8px;border:1px solid #e8e4dc;text-align:center;}
+.hiring-table td.year-col{font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-weight:500;color:var(--slate);background:#faf8f4;text-align:left;padding-left:12px;}
+.hiring-input{width:52px;font-size:12px;padding:3px 5px;border:1px solid #ccc;border-radius:4px;text-align:center;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;}
+.hiring-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,151,42,0.15);}
+.net-positive{color:var(--green-mid);font-weight:600;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;}
+.net-negative{color:var(--red-alert);font-weight:600;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;}
+.net-zero{color:#aaa;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;}
+
+/* ── HEADCOUNT FORECAST CHART ── */
+.forecast-wrap{margin-top:16px;}
+.forecast-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.forecast-year{font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-size:11px;color:#888;width:50px;}
+.forecast-track{flex:1;height:22px;background:var(--cream);border-radius:4px;overflow:hidden;position:relative;}
+.forecast-base{height:100%;background:#93c5fd;border-radius:4px;transition:width 0.4s ease;}
+.forecast-hired{position:absolute;top:0;height:100%;background:#6ee7b7;border-radius:0 4px 4px 0;}
+.forecast-cnt{font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-size:11px;font-weight:500;width:55px;text-align:right;}
+
+/* ── DEPT AGE RANK ── */
+.dept-avg-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;}
+.dept-avg-name{font-size:11px;color:#666;width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dept-avg-track{flex:1;height:14px;background:var(--cream);border-radius:3px;overflow:hidden;}
+.dept-avg-fill{height:100%;border-radius:3px;transition:width 0.4s ease;}
+.dept-avg-val{font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-size:11px;font-weight:500;width:44px;text-align:right;}
+
+/* ── ALERT ── */
+.alert-strip{background:var(--red-pale);border-left:3px solid var(--red-alert);border-radius:0 8px 8px 0;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#7f1d1d;display:flex;align-items:center;gap:8px;}
+.alert-strip svg{flex-shrink:0;}
+
+/* ── LEGEND ── */
+.legend-strip{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#888;}
+.leg-sq{width:10px;height:10px;border-radius:2px;}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,14,12,0.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-overlay.show{display:flex;}
+.modal-box{background:white;border-radius:14px;padding:1.75rem;width:320px;max-width:95vw;box-shadow:var(--shadow-lg);border-top:4px solid var(--gold);}
+.modal-title{font-family:Georgia,serif;font-size:16px;font-weight:700;color:var(--slate);margin-bottom:14px;}
+.modal-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0ece4;font-size:12px;}
+.modal-row .ml{color:#aaa;}
+
+.hidden{display:none;}
+.tab-pane{animation:fadeIn 0.2s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── ENHANCED MATRIX CELLS ── */
+.mc{padding:0;border:1px solid #e8e3d8;position:relative;min-width:110px;vertical-align:top;}
+.mc.mc-empty{background:#fafaf7;}
+.mc.mc-warn{background:#fff0ee;border-color:#e8a090;}
+.mc.mc-normal{background:#fff;}
+.mc-inner{padding:7px 9px 6px;}
+.mc-count{font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;font-size:18px;font-weight:700;line-height:1;color:#1a1a1a;}
+.mc-unit{font-size:10px;color:#aaa;margin-left:1px;}
+.mc-bar-wrap{height:5px;background:#f0ece4;border-radius:2px;margin:5px 0 4px;overflow:hidden;}
+.mc-bar{height:100%;border-radius:2px;transition:width 0.4s ease;}
+.mc-role-dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px;}
+.mc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.mc-warn-badge{position:absolute;top:4px;right:5px;background:#c0392b;color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;letter-spacing:0.03em;}
+.mc-zero{color:#ccc;font-size:11px;text-align:center;padding:14px 0;}
+
+/* ════════════════════════════════
+   RESPONSIVE — tablet & mobile
+   ════════════════════════════════ */
+
+/* ── Tablet (≤900px) ── */
+@media (max-width: 900px) {
+  .exec-header { padding: 0 1.2rem; height: 56px; }
+  .header-meta { display: none; }
+  .tab-bar { padding: 0 0.5rem; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 10px 14px; font-size: 11px; }
+  .main { padding: 1.2rem 1rem; }
+  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  #ov-kpi-row { grid-template-columns: repeat(3, 1fr) !important; }
+  .hiring-grid { grid-template-columns: 1fr; }
+  .ctrl-strip { gap: 10px; }
+  .year-display { font-size: 20px; }
+  .panel-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+
+/* ── Mobile (≤600px) ── */
+@media (max-width: 600px) {
+  .exec-header { padding: 0 1rem; height: 52px; }
+  .header-title { font-size: 13px; }
+  .header-sub { display: none; }
+  .tab-bar { padding: 0; }
+  .tab-btn { padding: 9px 11px; font-size: 10px; }
+  .main { padding: 0.9rem 0.75rem; }
+
+  /* KPI: 2列 */
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  #ov-kpi-row { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+  .kpi-val { font-size: 22px; }
+
+  /* グリッド2列 → 1列 */
+  div[style*="grid-template-columns:1fr 1fr"] { display: block !important; }
+  div[style*="grid-template-columns: 1fr 1fr"] { display: block !important; }
+  div[style*="grid-template-columns:repeat(6,1fr)"] { grid-template-columns: repeat(3,1fr) !important; }
+
+  /* パネル */
+  .panel { margin-bottom: 1rem; }
+  .panel-body { padding: 12px; }
+  .panel-head { padding: 10px 12px; flex-direction: column; align-items: flex-start; gap: 8px; }
+
+  /* コントロール */
+  .ctrl-strip { gap: 8px; }
+  .year-display { font-size: 18px; min-width: 64px; }
+  input[type=range] { width: 110px; }
+  .exec-btn { font-size: 10px; padding: 4px 9px; }
+
+  /* テーブルは横スクロール */
+  .agg-table { font-size: 10px; }
+  .mc { min-width: 72px; }
+  .mc-count { font-size: 14px; }
+  .mc-role-dots { display: none; } /* ドットはモバイルでは非表示 */
+
+  /* 退職タイムライン */
+  .retire-timeline { gap: 8px; }
+  .retire-year-card { min-width: 120px; padding: 10px 12px; }
+  .retire-year-count { font-size: 20px; }
+
+  /* 採用計画テーブル */
+  .hiring-table { font-size: 10px; }
+  .hiring-input { width: 40px; font-size: 10px; }
+
+  /* 年齢バー */
+  .age-bar-label { font-size: 10px; width: 44px; }
+  .age-bar-cnt { font-size: 10px; width: 28px; }
+  .dept-avg-name { width: 100px; font-size: 10px; }
+  .dept-avg-val { font-size: 10px; }
+
+  /* モーダル */
+  .modal-box { padding: 1.25rem; width: 92vw; }
+}
+
+/* ── 横スクロールコンテナの共通化 ── */
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 600px) {
+  .two-col-grid { display: block !important; }
+  .two-col-grid > .panel { margin-bottom: 1rem; }
+}
+
+/* ── GRID STICKY HEADER ── */
+.grid-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--paper);
+  padding: 10px 0 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #e0dbd0;
+}
+.grid-ctrl-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: white;
+  border: 1px solid #e2ddd4;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.grid-ctrl-year { min-width: 64px; }
+.grid-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: white;
+  border: 1px solid #e2ddd4;
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+/* アラートは sticky内でコンパクトに */
+#g-alert-area .alert-strip {
+  margin-bottom: 6px;
+  border-radius: 6px;
+}
+
+@media (max-width: 600px) {
+  .grid-ctrl-bar { gap: 8px; padding: 8px 10px; }
+  .grid-meta-bar { gap: 8px; padding: 6px 10px; }
+  .grid-ctrl-year .year-display { font-size: 16px; }
+  input[type=range] { width: 100px; }
+}
+
+/* ── STICKY TABLE HEADERS ── */
+.agg-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+/* 「部」列（1列目）: 列・行両方固定 */
+.agg-table thead th.dept-th {
+  left: 0;
+  z-index: 30; /* 交差点なので最前面 */
+}
+/* 「課・室」列（2列目）: 列固定 */
+.agg-table thead th.sub-th {
+  left: 56px; /* dept-thの幅に合わせる */
+  z-index: 30;
+}
+/* tbody の「部」セル（縦方向固定） */
+.agg-table tbody td.dept-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+/* tbody の「課・室」セル（縦方向固定） */
+.agg-table tbody td.sub-sticky {
+  position: sticky;
+  left: 56px;
+  z-index: 10;
+  background: inherit; /* 親のbgを引き継ぐ */
+  /* セル自身にbgを明示的に付けるのでここはフォールバック */
+}
+/* スクロールコンテナ */
+.grid-table-wrap {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 260px); /* 固定ヘッダー分を差し引く */
+  border-radius: 8px;
+  border: 1px solid #e2ddd4;
+}
+@media (max-width: 600px) {
+  .grid-table-wrap {
+    max-height: calc(100vh - 240px);
+  }
+  .agg-table thead th.sub-th { left: 48px; }
+  .agg-table tbody td.sub-sticky { left: 48px; }
+}
+
+
+/* ══ STORY TAB ══ */
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #7d8590;
+  --text-dim: #484f58;
+  --gold: #d4a017;
+  --gold-dim: #d4a01733;
+  --red: #f85149;
+  --red-dim: #f8514922;
+  --green: #3fb950;
+  --green-dim: #3fb95022;
+  --blue: #58a6ff;
+  --blue-dim: #58a6ff22;
+  --orange: #f0883e;
+  --purple: #bc8cff;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic UI',sans-serif;
+  font-size:13px;
+  min-height:100vh;
+}
+
+/* ── HEADER ── */
+.site-header{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.site-title{font-size:14px;font-weight:600;color:var(--text);letter-spacing:0.02em;}
+.site-title span{color:var(--gold);margin-right:8px;}
+.header-right{display:flex;align-items:center;gap:16px;}
+
+/* ── YEAR CONTROLLER ── */
+.year-controller{
+  position:sticky;top:52px;z-index:90;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:12px 24px;
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+}
+.year-big{
+  font-size:32px;font-weight:700;
+  color:var(--text);
+  font-variant-numeric:tabular-nums;
+  min-width:90px;
+}
+.year-big .yr-suffix{font-size:14px;color:var(--text-muted);font-weight:400;margin-left:2px;}
+.year-note{font-size:11px;color:var(--text-muted);}
+.slider-track{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-dim);}
+.slider-track input[type=range]{
+  width:160px;
+  accent-color:var(--gold);
+  cursor:pointer;
+}
+.ctrl-chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text-muted);
+}
+.ctrl-chip input[type=number]{
+  width:36px;font-size:11px;
+  background:transparent;border:none;color:var(--gold);
+  text-align:center;outline:none;
+  font-variant-numeric:tabular-nums;
+}
+.recalc-btn{
+  background:var(--gold);color:#000;
+  border:none;border-radius:6px;padding:5px 14px;
+  font-size:11px;font-weight:700;cursor:pointer;
+  transition:opacity 0.15s;
+}
+.recalc-btn:hover{opacity:0.85;}
+
+/* ── MAIN ── */
+.main{padding:24px;max-width:1200px;margin:0 auto;}
+.section{margin-bottom:36px;}
+.section-label{
+  font-size:10px;font-weight:600;letter-spacing:0.12em;
+  color:var(--text-dim);text-transform:uppercase;
+  margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── KPI ROW ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px;}
+.kpi{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:16px;position:relative;overflow:hidden;
+}
+.kpi::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;}
+.kpi.k-total::before{background:var(--blue);}
+.kpi.k-retire::before{background:var(--red);}
+.kpi.k-avg::before{background:var(--gold);}
+.kpi.k-young::before{background:var(--green);}
+.kpi-label{font-size:10px;color:var(--text-muted);letter-spacing:0.06em;margin-bottom:8px;}
+.kpi-val{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;}
+.kpi-val .unit{font-size:13px;font-weight:400;color:var(--text-muted);margin-left:2px;}
+.kpi-delta{font-size:11px;margin-top:6px;}
+.kpi-delta.neg{color:var(--red);}
+.kpi-delta.pos{color:var(--green);}
+.kpi-delta.neu{color:var(--text-muted);}
+
+/* ── WATERFALL ── */
+.wf-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.wf-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.wf-chart{width:100%;height:220px;position:relative;}
+.wf-col{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;padding:0 1px;min-width:0;}
+.wf-bar-wrap{width:100%;position:relative;display:flex;align-items:flex-end;justify-content:center;height:170px;}
+.wf-bar{
+  width:80%;border-radius:3px 3px 0 0;
+  position:relative;transition:height 0.4s ease;
+  cursor:pointer;min-width:4px;
+}
+.wf-bar:hover{opacity:0.85;}
+.wf-connector{
+  position:absolute;top:0;right:0;
+  width:30%;height:1px;
+  border-top:1px dashed var(--border);
+  z-index:1;
+}
+.wf-year{font-size:10px;color:var(--text-dim);margin-top:6px;text-align:center;font-variant-numeric:tabular-nums;}
+.wf-val{font-size:10px;font-weight:600;text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;}
+.wf-legend{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap;}
+.wf-leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);}
+.wf-leg-sq{width:10px;height:10px;border-radius:2px;}
+
+/* ── PYRAMID ── */
+.pyramid-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.pyramid-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.pyramid-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px;}
+.pyramid-chart{display:grid;grid-template-columns:1fr auto 1fr;gap:0;align-items:center;}
+.pyr-bar-left{display:flex;justify-content:flex-end;}
+.pyr-bar-right{display:flex;justify-content:flex-start;}
+.pyr-label{
+  font-size:10px;color:var(--text-muted);
+  text-align:center;padding:0 8px;
+  white-space:nowrap;
+  line-height:1;
+}
+.pyr-bar{
+  height:18px;border-radius:2px;
+  transition:width 0.5s ease;
+  position:relative;
+}
+.pyr-row{display:contents;}
+.pyr-count{
+  font-size:10px;font-variant-numeric:tabular-nums;
+  position:absolute;top:50%;transform:translateY(-50%);
+  color:rgba(255,255,255,0.7);
+  padding:0 5px;
+  white-space:nowrap;
+}
+.pyr-count.left{right:4px;}
+.pyr-count.right{left:4px;}
+.pyr-spacer{height:4px;grid-column:1/-1;}
+.pyr-legend{display:flex;gap:16px;margin-top:14px;justify-content:center;}
+.pyr-leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);}
+.pyr-leg-sq{width:24px;height:8px;border-radius:2px;}
+
+/* ── TIMELINE / DEPT RISK ── */
+.risk-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.risk-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.risk-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px;}
+.risk-table{width:100%;border-collapse:collapse;}
+.risk-table th{
+  font-size:10px;color:var(--text-dim);letter-spacing:0.06em;
+  padding:5px 8px;border-bottom:1px solid var(--border);text-align:center;
+  font-weight:500;
+}
+.risk-table th.dept-col{text-align:left;width:120px;}
+.risk-table td{padding:5px 8px;border-bottom:1px solid var(--border);text-align:center;vertical-align:middle;}
+.risk-table td.dept-name{
+  text-align:left;font-size:12px;font-weight:500;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;
+}
+.risk-cell{
+  border-radius:4px;padding:3px 6px;
+  font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;
+  display:inline-block;min-width:28px;text-align:center;
+}
+.rc-none{color:var(--text-dim);}
+.rc-low{background:#3fb95022;color:var(--green);}
+.rc-mid{background:#f0883e33;color:var(--orange);}
+.rc-high{background:#f8514933;color:var(--red);}
+.rc-critical{background:#f85149;color:#fff;}
+
+/* ── HEADCOUNT TREND ── */
+.trend-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.trend-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;}
+.trend-chart{position:relative;height:180px;}
+.trend-svg{width:100%;height:100%;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:700px){
+  .site-header{padding:0 14px;}
+  .year-controller{padding:10px 14px;gap:12px;}
+  .year-big{font-size:24px;}
+  .slider-track input[type=range]{width:110px;}
+  .main{padding:14px;}
+  .kpi-grid{grid-template-columns:repeat(2,1fr);gap:8px;}
+  .kpi-val{font-size:24px;}
+  .wf-chart{height:180px;}
+  .risk-table{font-size:11px;}
+}
+@media(max-width:440px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .year-big{font-size:20px;min-width:70px;}
+}
+
+
+/* ── MAIN PANE SWITCHER ── */
+.main-pane { display: block; }
+.main-pane.hidden { display: none !important; }
+.story-main { padding: 0 0 24px; }
+
+
+/* ── GRID KPI ROW ── */
+.grid-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.grid-kpi {
+  background: white;
+  border: 1px solid #e2ddd4;
+  border-radius: 8px;
+  padding: 10px 12px;
+  position: relative;
+  overflow: hidden;
+}
+.grid-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+.grid-kpi.gk-total::before  { background: var(--slate); }
+.grid-kpi.gk-avg::before    { background: var(--gold); }
+.grid-kpi.gk-retire::before { background: var(--red-alert); }
+.grid-kpi.gk-young::before  { background: var(--green-mid); }
+.grid-kpi.gk-old::before    { background: var(--orange, #f59e0b); }
+.grid-kpi-label { font-size: 9px; color: #999; letter-spacing: 0.05em; margin-bottom: 4px; }
+.grid-kpi-val   { font-size: 20px; font-weight: 700; line-height: 1; color: var(--ink); }
+.grid-kpi-val .gu { font-size: 11px; font-weight: 400; color: #aaa; margin-left: 1px; }
+.grid-kpi-sub   { font-size: 10px; color: #aaa; margin-top: 3px; }
+.grid-kpi-sub.warn { color: var(--red-alert); font-weight: 500; }
+.grid-kpi-scope { font-size: 10px; color: var(--gold); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.03em; }
+
+@media (max-width: 700px) {
+  .grid-kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .grid-kpi-val { font-size: 16px; }
+}
+@media (max-width: 440px) {
+  .grid-kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── HIRING PROPOSAL ── */
+.proposal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:0;}
+.proposal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+.proposal-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+.proposal-modes{display:flex;gap:6px;flex-wrap:wrap;}
+.mode-btn{
+  font-size:11px;padding:4px 12px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--border);background:transparent;color:var(--text-muted);
+  transition:all 0.15s;
+}
+.mode-btn.active{background:var(--gold);color:#000;border-color:var(--gold);font-weight:600;}
+.mode-btn:hover:not(.active){border-color:var(--gold);color:var(--gold);}
+.proposal-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;}
+.proposal-table th{
+  font-size:10px;color:var(--text-dim);letter-spacing:0.05em;
+  padding:6px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:500;
+}
+.proposal-table th.yr-col{text-align:left;min-width:60px;}
+.proposal-table td{padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;vertical-align:middle;}
+.proposal-table td.yr-label{font-family:ui-monospace,'SF Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;}
+.hire-num{
+  display:inline-block;min-width:28px;padding:2px 8px;border-radius:4px;
+  font-weight:700;font-family:ui-monospace,'SF Mono',monospace;font-size:12px;
+}
+.hire-0{color:var(--text-dim);}
+.hire-low{background:#3fb95022;color:var(--green);}
+.hire-mid{background:#f0883e33;color:var(--orange);}
+.hire-high{background:#f8514933;color:var(--red);}
+.proposal-total-row td{border-top:2px solid var(--border);font-weight:700;background:#21262d;}
+.proposal-note{font-size:11px;color:var(--text-muted);line-height:1.6;padding:10px 12px;background:#21262d;border-radius:8px;}
+.proposal-note strong{color:var(--gold);}
+.net-row td{font-size:11px;color:var(--text-muted);}
+.net-pos{color:var(--green)!important;font-weight:600;}
+.net-neg{color:var(--red)!important;font-weight:600;}
+.net-zero{color:var(--text-dim)!important;}
+</style>
+</head>
+<body>
+
+
+<div class="exec-header">
+  <div class="header-brand">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+    </div>
+    <div>
+      <div class="header-title">人員構成シミュレーター</div>
+      <div class="header-sub">EXECUTIVE WORKFORCE PLANNING DASHBOARD</div>
+    </div>
+  </div>
+  <div class="header-meta">実データ 362名 ／ 機密資料</div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn" onclick="showMainTab('story',this)">📈 推移レポート</button>
+  <button class="tab-btn active" onclick="showMainTab('exec',this)">🗂 タイムラインシミュレーター</button>
+</div>
+
+<div class="main">
+
+<!-- ── KPI ROW (always visible) ── -->
+<div id="main-story" class="main-pane hidden">
+  <!-- story tab content injected here -->
+</div>
+<div id="main-exec" class="main-pane">
+<div id="tab-grid" class="tab-pane">
+  <!-- ★ 固定ヘッダー：スクロールしても常に見える ★ -->
+  <div class="grid-sticky-header">
+    <!-- コントロール行 -->
+    <div class="grid-ctrl-bar">
+      <div class="grid-ctrl-year">
+        <div class="year-display" id="g-yr-disp">2026年</div>
+        <div class="year-note" id="g-yr-note">現在</div>
+      </div>
+      <div class="slider-group">
+        <span>2026</span>
+        <input type="range" min="0" max="10" value="0" step="1" id="g-yr-slider" oninput="renderGrid()">
+        <span>2036</span>
+      </div>
+      <div class="ctrl-pill">定年 <input type="number" id="r6" value="65">歳</div>
+      <button class="exec-btn primary" onclick="renderGrid()">再計算</button>
+      <label class="toggle ctrl-pill"><input type="checkbox" id="g-shokutaku" onchange="renderGrid()"> 嘱託含む</label>
+    </div>
+    <!-- KPI概況 -->
+    <div id="g-kpi-row" class="grid-kpi-row"></div>
+    <!-- アラート -->
+    <div id="g-alert-area"></div>
+    <!-- フィルター＋凡例行 -->
+    <div class="grid-meta-bar">
+      <div class="filter-bar" style="margin-bottom:0;">
+        <span class="filter-label">絞り込み：</span>
+        <select id="g-dept-filter" onchange="renderGrid()" style="width:160px;"></select>
+      </div>
+      <div class="legend-strip" style="margin-bottom:0;">
+        <div class="leg"><div class="leg-sq" style="background:#dbeafe;"></div>在籍</div>
+        <div class="leg"><div class="leg-sq" style="background:#fef9c3;outline:1px solid #f59e0b;"></div>定年3年以内</div>
+        <div class="leg"><div class="leg-sq" style="background:#f1f0e8;"></div>嘱託・契約</div>
+      </div>
+    </div>
+  </div>
+  <!-- テーブル本体：ここだけスクロール -->
+  <div class="panel">
+    <div class="panel-body" style="padding:12px;">
+      <div class="grid-table-wrap"><div id="grid-canvas"></div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title"></div>
+    <div id="modal-body"></div>
+    <div style="text-align:right;margin-top:1.25rem;"><button class="exec-btn" onclick="closeModal()">閉じる</button></div>
+  </div>
+</div>
+
+
+<script>
+
+// ══════════════════════════════
+//  RAW DATA
+// ══════════════════════════════
+const RAW=[["1967/7/18", "6", "北海道支店", "支店長", "一般〔旧定年〕", "８級", "1992/4/1"], ["1977/3/29", "11", "工務部", "次長", "一般", "７級", "1999/4/1"], ["1969/3/5", "12", "中部支店", "副支店長", "一般〔旧定年〕", "８級", "1992/4/1"], ["1977/2/12", "19", "北海道支店", "次長", "一般", "８級", "1999/4/1"], ["1969/8/24", "20", "西日本支店", "支店長", "一般〔旧定年〕", "８級", "1992/4/1"], ["1970/1/13", "28", "搬送システム事業部", "副部長", "一般〔旧定年〕", "８級", "1992/4/1"], ["1960/2/12", "32", "工務部/工務課", "", "嘱託社員", "６級", "1982/3/23"], ["1970/1/16", "34", "管理部", "次長", "一般〔旧定年〕", "７級", "1992/4/1"], ["1960/9/26", "38", "中部支店", "上席執行役員", "嘱託社員", "９級", "1983/3/22"], ["1952/1/12", "39", "本社", "代表取締役会長", "役員", "", "1974/3/22"], ["1968/5/30", "41", "技術部/積算課", "", "一般〔旧定年〕", "６級", "1992/4/1"], ["1969/7/12", "42", "製造部/製造課", "", "一般〔旧定年〕", "５級", "1992/4/1"], ["1964/5/1", "48", "製造部/製造課/ユニット4", "", "嘱託社員", "５級", "1983/3/22"], ["1986/11/23", "50", "本社", "代表取締役社長", "役員", "", "2012/3/21"], ["1989/4/10", "51", "西日本支店/福岡営業所", "課長", "一般", "６級", "2012/4/2"], ["1988/2/4", "53", "技術部/電気課", "", "一般", "６級", "2012/4/2"], ["1988/2/12", "54", "北陸サービスセンター/工務課", "付課長［専門職］", "一般", "６級", "2012/4/2"], ["1989/6/22", "55", "技術部/機械第１課", "", "一般", "６級", "2012/4/2"], ["1973/12/14", "56", "製造部/製造課/ユニット4", "", "一般", "５級", "1992/4/1"], ["1973/6/7", "57", "品質管理部/検査課", "", "一般", "５級", "1992/4/1"], ["1974/1/28", "62", "製造部/製造課", "課長", "一般", "７級", "1992/4/1"], ["1973/9/25", "66", "製造部/製造課/ユニット3", "", "一般", "５級", "1992/4/1"], ["1973/4/28", "68", "営業本部/営業課", "付課長［専門職］", "一般", "６級", "1992/4/1"], ["1994/1/12", "70", "製造部/生産管理課", "", "一般", "５級", "2012/4/2"], ["1960/10/21", "73", "製造部/物流課/（技能職）", "", "嘱託社員", "５級", "1979/3/22"], ["1993/5/21", "76", "製造部/製造課/ユニット3", "", "一般", "４級", "2012/4/2"], ["1958/7/9", "78", "品質管理部", "部長", "嘱託社員", "", "2012/7/1"], ["1988/4/17", "81", "人事部/総務課", "課長", "一般", "７級", "2013/4/1"], ["2000/9/19", "82", "業務部/業務課", "", "一般", "４級", "2023/4/1"], ["2000/11/21", "83", "搬送システム事業部/技術課", "", "一般", "４級", "2023/4/1"], ["1999/4/22", "84", "西日本支店/営業課", "", "一般", "４級", "2023/4/1"], ["2000/1/13", "86", "技術部/電気課", "", "一般", "４級", "2023/4/1"], ["1990/7/12", "87", "技術部/機械第１課", "", "一般", "６級", "2013/4/1"], ["1960/4/22", "88", "品質管理部/検査課", "", "嘱託社員", "５級", "1981/3/25"], ["1965/3/3", "89", "製造部/製造課/ユニット3", "", "嘱託社員", "５級", "1980/4/1"], ["1989/8/13", "90", "品質管理部/検査課", "", "一般", "５級", "2013/4/1"], ["2000/10/21", "91", "技術部/電気課", "", "一般", "４級", "2023/4/1"], ["1999/12/9", "92", "技術部/機械第１課", "", "一般", "４級", "2023/4/1"], ["2000/10/10", "93", "技術部/機械第２課", "", "一般", "４級", "2023/4/1"], ["2000/7/16", "94", "製造部/生産技術課", "", "一般", "４級", "2023/4/1"], ["2004/7/15", "97", "搬送システム事業部/サービス課", "", "一般", "２級", "2023/4/1"], ["1963/2/4", "98", "品質管理部/技術サービス課", "", "嘱託社員", "５級", "1981/3/25"], ["1981/1/11", "100", "技術部/機械第１課", "", "一般", "５級", "2023/10/6"], ["1992/1/4", "101", "西日本支店/工務課", "課長", "一般", "６級", "2014/4/1"], ["1991/3/24", "102", "技術部/電気課", "", "一般", "６級", "2014/4/1"], ["1989/1/31", "103", "人事部/人事部付/TOS出向", "", "一般", "６級", "2014/4/1"], ["1992/2/5", "104", "北陸サービスセンター/工務課", "", "一般", "６級", "2014/4/1"], ["1991/3/11", "107", "技術部/機械第２課", "", "一般", "６級", "2014/4/1"], ["1965/5/13", "108", "技術部/企画設計課", "", "契約社員", "６級", "2023/8/1"], ["1995/9/3", "110", "製造部/製造課/ユニット1", "", "一般", "３級", "2014/4/1"], ["1956/8/7", "122", "事業開発室", "室長", "役員", "", "1979/3/22"], ["1991/10/12", "124", "技術部/機械第１課", "", "一般", "６級", "2015/4/1"], ["1957/5/26", "125", "中部支店", "付次長［専門職］", "嘱託社員", "７級", "1980/4/1"], ["1974/2/22", "126", "海外事業室", "", "一般", "６級", "2024/2/19"], ["1980/6/5", "127", "製造部/製造課/ユニット2", "", "一般", "４級", "2024/1/9"], ["1994/10/26", "129", "北陸サービスセンター/庶務課", "", "一般", "３級", "2024/5/1"], ["1996/11/27", "130", "製造部/製造課/ユニット4", "", "一般", "３級", "2015/4/1"], ["1997/3/1", "133", "製造部/製造課/ユニット3", "", "一般", "３級", "2015/4/1"], ["1957/8/14", "134", "中部支店/高山サービスセンター", "", "アルバイト・パート", "６級", "1988/5/1"], ["1980/1/29", "135", "品質管理部/品質管理課", "", "一般", "４級", "2024/3/1"], ["1983/11/15", "138", "製造部/製造課/ユニット2", "", "一般", "５級", "2002/4/1"], ["1967/9/2", "141", "東北支店/庶務課", "", "一般〔旧定年〕", "５級", "2015/6/22"], ["1977/7/17", "143", "人事部/総務課", "", "アルバイト・パート", "", "2016/2/22"], ["1959/10/9", "145", "品質管理部/検査課", "", "嘱託社員", "５級", "2006/9/1"], ["1961/2/11", "147", "製造部/生産技術課/（技能職）", "", "嘱託社員", "４級", "1979/3/22"], ["1991/10/3", "149", "搬送システム事業部/技術課", "", "一般", "６級", "2016/4/1"], ["1993/12/21", "150", "人事部/総務課", "", "一般", "６級", "2016/4/1"], ["1993/12/14", "152", "北陸サービスセンター/工務課", "", "一般", "５級", "2016/4/1"], ["1958/9/14", "153", "東北支店", "付次長［専門職］", "嘱託社員", "８級", "1981/3/25"], ["1993/10/20", "154", "中部支店/工務課", "付課長［専門職］", "一般", "６級", "2016/4/1"], ["1993/10/16", "157", "技術部/企画設計課", "", "一般", "６級", "2016/4/1"], ["1993/6/9", "159", "営業本部/営業課", "", "一般", "６級", "2016/4/1"], ["2003/3/30", "161", "業務部/秘書課", "", "一般", "３級", "2025/4/1"], ["1997/10/17", "162", "製造部/製造課/ユニット4", "", "一般", "３級", "2016/4/1"], ["2002/5/29", "163", "営業本部/営業課", "", "一般", "３級", "2025/4/1"], ["1969/2/11", "164", "品質管理部", "副部長", "一般〔旧定年〕", "８級", "2016/7/1"], ["2002/8/29", "166", "東北支店/営業課", "", "一般", "３級", "2025/4/1"], ["1970/2/20", "167", "営業本部", "部長", "一般〔旧定年〕", "９級", "1993/4/1"], ["1963/9/29", "168", "管理部", "副部長", "嘱託社員", "８級", "1982/3/23"], ["1970/5/31", "169", "東北支店", "支店長", "一般〔旧定年〕", "８級", "1993/4/1"], ["1973/3/31", "170", "製造部/生産管理課", "", "一般", "５級", "2019/8/2"], ["2002/4/9", "171", "営業本部/営業課", "", "一般", "３級", "2025/4/1"], ["2002/9/11", "172", "製造部/生産管理課", "", "一般", "３級", "2025/4/1"], ["2000/5/24", "173", "工務部/工務課", "", "一般", "３級", "2025/4/1"], ["2003/3/13", "174", "技術部/機械第１課", "", "一般", "３級", "2025/4/1"], ["2003/2/27", "175", "技術部/機械第２課", "", "一般", "３級", "2025/4/1"], ["2006/7/15", "177", "管理部/経理課", "", "一般", "１級", "2025/4/1"], ["1961/12/26", "178", "北海道支店/工務課", "付課長［専門職］", "嘱託社員", "６級", "2017/1/4"], ["1973/8/11", "179", "中部支店/高山サービスセンター", "", "一般", "３級", "2017/1/25"], ["2006/12/27", "181", "人事部/総務課", "", "一般", "１級", "2025/4/1"], ["1968/6/17", "183", "東北支店", "付次長［専門職］", "一般〔旧定年〕", "７級", "1993/4/1"], ["1995/1/6", "184", "搬送システム事業部/技術課", "", "一般", "６級", "2017/4/3"], ["1994/6/8", "185", "技術部/電気課", "", "一般", "６級", "2017/4/3"], ["2006/12/19", "186", "製造部/製造課/ユニット3", "", "一般", "１級", "2025/4/1"], ["1994/12/10", "187", "北海道支店/工務課", "", "一般", "６級", "2017/4/3"], ["1961/5/3", "188", "技術部/機械第２課", "付課長［専門職］", "嘱託社員", "６級", "1982/3/23"], ["1994/11/7", "191", "工務部/工務課", "", "一般", "５級", "2017/4/3"], ["1993/5/14", "192", "工務部/工務課", "", "一般", "６級", "2017/4/3"], ["2006/4/10", "193", "製造部/製造課/ユニット1", "", "一般", "１級", "2025/4/1"], ["2004/8/4", "194", "製造部/製造課/ユニット2", "", "一般", "１級", "2025/4/1"], ["1998/6/22", "195", "品質管理部/検査課", "", "一般", "３級", "2017/4/3"], ["1998/8/18", "196", "製造部/製造課/ユニット2", "", "一般", "３級", "2017/4/3"], ["2002/2/16", "201", "人事部/総務課", "", "一般", "３級", "2024/4/1"], ["2000/9/15", "202", "営業本部/営業課", "", "一般", "３級", "2024/4/1"], ["2000/11/30", "203", "中部支店/営業課", "", "一般", "３級", "2024/4/1"], ["2001/9/10", "204", "搬送システム事業部/営業課", "", "一般", "３級", "2024/4/1"], ["1975/3/16", "205", "北海道支店/営業課", "", "一般", "６級", "2017/7/18"], ["1978/2/17", "206", "中部支店/営業課", "", "一般", "６級", "2017/9/1"], ["1982/1/15", "207", "営業本部/アジア市場開拓室", "次長", "一般", "７級", "2022/11/1"], ["2002/3/21", "208", "人事部/総務課", "", "一般", "３級", "2024/4/1"], ["2000/11/22", "209", "管理部/経理課", "", "一般", "３級", "2024/4/1"], ["2001/9/21", "211", "技術部/電気課", "", "一般", "３級", "2024/4/1"], ["1963/6/17", "212", "製造部/製造課/ユニット2", "", "嘱託社員", "５級", "1982/3/23"], ["1964/7/18", "213", "製造部/製造課/ユニット1", "", "嘱託社員", "５級", "1983/3/22"], ["2001/11/6", "214", "技術部/機械第１課", "", "一般", "３級", "2024/4/1"], ["2001/8/31", "215", "西日本支店/工務課", "", "一般", "３級", "2024/4/1"], ["2001/4/2", "216", "技術部/企画設計課", "", "一般", "３級", "2024/4/1"], ["2002/1/25", "217", "製造部/生産管理課", "", "一般", "３級", "2024/4/1"], ["2002/3/6", "219", "製造部/購買課", "", "一般", "３級", "2024/4/1"], ["2001/6/7", "220", "中部支店/工務課", "", "一般", "３級", "2024/4/1"], ["1960/11/27", "221", "品質管理部/技術サービス課", "", "嘱託社員", "６級", "1981/3/25"], ["2001/11/22", "222", "工務部/工務課", "", "一般", "３級", "2024/4/1"], ["2004/12/27", "223", "管理部/経理課", "", "一般", "１級", "2024/4/1"], ["1962/3/11", "224", "品質管理部/品質管理課", "", "嘱託社員", "５級", "1981/3/25"], ["1962/4/8", "225", "搬送システム事業部/サービス課", "", "嘱託社員", "５級", "1981/3/25"], ["2002/1/26", "227", "業務部/業務課", "", "一般", "３級", "2024/6/1"], ["1964/1/25", "228", "製造部/生産技術課/（技能職）", "主任", "嘱託社員", "５級", "1982/3/23"], ["1995/8/10", "229", "中部支店/庶務課", "", "一般", "３級", "2024/10/1"], ["1995/3/22", "232", "業務部/業務課", "", "一般", "５級", "2018/4/2"], ["1995/10/2", "234", "西日本支店/営業課", "", "一般", "５級", "2018/4/2"], ["1993/12/17", "235", "技術部/企画設計課", "", "一般", "５級", "2018/4/2"], ["1992/8/11", "237", "西日本支店/営業課", "", "一般", "５級", "2018/4/2"], ["1960/5/19", "241", "技術部", "付次長［専門職］", "嘱託社員", "８級", "1983/3/22"], ["1977/6/22", "242", "搬送システム事業部", "次長", "一般", "７級", "2003/4/1"], ["1999/4/7", "243", "製造部/製造課/ユニット1", "", "一般", "３級", "2018/4/2"], ["1978/10/4", "244", "人事部/人事部付/TOS出向", "付課長［専門職］", "一般", "６級", "2003/4/1"], ["1999/5/9", "245", "製造部/製造課/ユニット3", "", "一般", "３級", "2018/4/2"], ["1999/8/22", "246", "製造部/製造課/ユニット2", "", "一般", "３級", "2018/4/2"], ["1973/7/15", "247", "管理部/経理課", "", "一般", "４級", "2024/4/15"], ["1974/8/17", "248", "製造部/製造課", "", "一般", "４級", "2024/4/15"], ["1977/12/10", "249", "搬送システム事業部", "次長", "一般", "７級", "2003/4/1"], ["1964/9/24", "251", "工務部/工務課", "", "嘱託社員", "６級", "1983/3/22"], ["1989/5/14", "252", "北陸サービスセンター/営業課", "", "一般", "５級", "2018/4/9"], ["1975/1/9", "254", "技術部/技術管理課", "", "一般", "４級", "2018/4/17"], ["1979/6/12", "255", "品質管理部/技術サービス課", "課長", "一般", "６級", "2003/4/1"], ["1980/5/14", "256", "中部支店/工務課", "付課長［専門職］", "一般", "６級", "2003/4/1"], ["1980/1/8", "257", "中部支店/庶務課", "", "一般", "３級", "2024/11/1"], ["1978/4/25", "258", "技術部/企画設計課", "課長", "一般", "７級", "2003/4/1"], ["1977/6/29", "259", "技術部/技術管理課", "", "一般", "５級", "2024/9/2"], ["1985/1/22", "261", "製造部/製造課/ユニット1", "副主任", "一般", "５級", "2003/4/1"], ["1963/6/6", "262", "西日本支店/庶務課", "", "嘱託社員", "４級", "2003/10/21"], ["1980/10/24", "263", "品質管理部/検査課", "課長", "一般", "６級", "2024/10/1"], ["1996/7/14", "266", "技術部/技術管理課", "", "一般", "５級", "2019/4/1"], ["1989/3/26", "268", "東北支店/庶務課", "", "一般", "４級", "2018/12/17"], ["1996/2/29", "269", "製造部/製造課/ユニット2", "", "一般", "３級", "2024/11/1"], ["1992/7/29", "270", "管理部", "", "一般", "５級", "2019/3/1"], ["1971/9/15", "271", "西日本支店", "副支店長", "一般", "８級", "1994/4/1"], ["1971/11/18", "272", "西日本支店/福岡営業所", "所長", "一般", "８級", "1994/4/1"], ["1975/8/3", "273", "製造部/購買課", "", "一般", "６級", "2024/10/7"], ["1995/9/18", "274", "製造部/製造課/ユニット2", "", "一般", "３級", "2024/11/1"], ["1993/1/4", "276", "搬送システム事業部/営業課", "", "一般", "５級", "2024/12/1"], ["1965/10/4", "277", "技術部", "次長", "嘱託社員", "８級", "2025/1/1"], ["1968/7/2", "278", "搬送システム事業部/サービス課", "付課長［専門職］", "一般〔旧定年〕", "７級", "1994/4/1"], ["1966/8/3", "279", "搬送システム事業部", "部長", "一般〔旧定年〕", "９級", "2020/4/1"], ["1979/8/20", "281", "東北支店/営業課", "課長", "一般", "６級", "2019/5/20"], ["1959/12/29", "282", "工務部", "参事", "契約社員", "８級", "2025/1/1"], ["1984/4/17", "283", "東北支店/営業課", "", "一般", "５級", "2025/3/1"], ["1960/9/29", "286", "品質管理部", "次長", "嘱託社員", "７級", "1984/3/21"], ["1995/4/6", "288", "人事部/総務課", "", "一般", "５級", "2025/4/1"], ["1961/4/16", "290", "製造部/製造課", "付課長［専門職］", "嘱託社員", "６級", "1984/3/21"], ["1973/8/14", "291", "業務部/秘書課", "課長", "一般", "６級", "1994/4/1"], ["1968/4/14", "294", "製造部", "次長", "一般〔旧定年〕", "７級", "2025/5/1"], ["1979/7/21", "295", "技術部", "付副部長［専門職］", "一般", "８級", "2019/9/1"], ["1962/2/26", "296", "搬送システム事業部/技術課", "付課長［専門職］", "嘱託社員", "６級", "1984/3/21"], ["2000/7/17", "298", "北陸サービスセンター/営業課", "", "一般", "３級", "2025/6/1"], ["1974/8/28", "299", "製造部/物流課", "課長", "一般", "６級", "2025/7/1"], ["1975/6/22", "300", "製造部/製造課/ユニット3", "", "一般", "５級", "1994/4/1"], ["1988/11/8", "302", "西日本支店/工務課", "", "一般", "６級", "2025/7/14"], ["1991/11/29", "304", "製造部/製造課/ユニット3", "", "一般", "３級", "2025/7/14"], ["1986/10/11", "306", "西日本支店/福岡営業所", "", "一般", "３級", "2025/7/7"], ["2002/11/2", "307", "東北支店/工務課", "", "一般", "３級", "2025/10/1"], ["1964/9/7", "308", "", "上席執行役員人事部長", "嘱託社員", "９級", "2020/7/1"], ["1976/4/22", "309", "管理部/経理課", "課長", "一般", "６級", "2025/9/1"], ["1972/7/3", "311", "搬送システム事業部/サービス課", "", "一般", "４級", "2025/9/16"], ["1960/5/26", "313", "東北支店/営業課", "", "嘱託社員", "５級", "1984/9/21"], ["1997/3/17", "314", "搬送システム事業部/技術課", "", "一般", "５級", "2025/10/1"], ["1988/6/16", "315", "技術部/技術管理課", "", "一般", "６級", "2025/10/1"], ["1952/10/3", "316", "本社", "取締役", "役員", "", "2007/11/1"], ["1960/4/11", "318", "北陸サービスセンター/庶務課", "", "嘱託社員", "４級", "1984/11/21"], ["1976/9/11", "319", "製造部/物流課/（技能職）", "", "一般", "４級", "2025/10/16"], ["1974/1/3", "320", "管理部", "付次長［専門職］", "一般", "７級", "2026/1/1"], ["1965/5/18", "321", "搬送システム事業部/技術課", "付課長［専門職］", "嘱託社員", "７級", "2004/10/12"], ["1978/1/31", "322", "製造部/購買課", "", "一般", "６級", "2026/1/19"], ["1960/12/5", "323", "技術部/技術管理課", "", "嘱託社員", "６級", "1985/3/22"], ["2003/1/13", "324", "北海道支店/営業課", "", "一般", "３級", "2026/2/1"], ["2001/10/22", "325", "営業本部/営業課", "", "一般", "３級", "2026/1/13"], ["1999/5/20", "326", "北海道支店/工務課", "", "一般", "３級", "2026/2/1"], ["2004/7/2", "327", "搬送システム事業部/技術課", "", "一般", "２級", "2026/2/16"], ["1980/1/10", "328", "東北支店/工務課", "", "一般", "６級", "2026/3/1"], ["1997/9/25", "329", "製造部/生産管理課", "", "一般", "４級", "2026/3/1"], ["1962/7/27", "330", "工務部", "付部長［専門職］", "嘱託社員", "８級", "1985/3/22"], ["1962/8/2", "331", "品質管理部", "次長", "嘱託社員", "７級", "1985/3/22"], ["1964/2/26", "332", "品質管理部", "付副部長［専門職］", "契約社員", "８級", "2026/3/20"], ["1972/4/10", "333", "品質管理部", "副部長", "一般", "８級", "1995/4/3"], ["1966/7/4", "337", "製造部/製造課/ユニット4", "", "一般〔旧定年〕", "５級", "1985/3/22"], ["1966/8/17", "338", "北海道支店/工務課", "付課長［専門職］", "一般〔旧定年〕", "６級", "1985/3/22"], ["1980/4/6", "339", "搬送システム事業部/工務課", "付課長［専門職］", "一般", "６級", "2005/4/1"], ["1972/8/20", "341", "設備安全管理室", "次長", "一般", "７級", "1995/4/3"], ["1973/3/8", "342", "技術部", "次長", "一般", "８級", "2017/10/2"], ["1972/6/12", "344", "技術部/積算課", "", "一般", "６級", "1995/4/3"], ["1977/2/6", "346", "製造部/物流課/（技能職）", "", "一般", "５級", "1995/4/3"], ["1958/11/9", "347", "北海道支店", "上席執行役員", "嘱託社員", "９級", "1985/6/19"], ["1976/7/3", "348", "製造部/製造課/ユニット2", "", "一般", "５級", "1995/4/3"], ["1995/12/15", "352", "技術部/電気課", "", "一般", "４級", "2020/4/1"], ["1997/8/4", "354", "技術部/技術管理課", "", "一般", "４級", "2020/4/1"], ["1980/4/6", "355", "事業開発室", "付課長［専門職］", "一般", "６級", "2005/4/1"], ["1977/2/22", "356", "製造部/製造課/ユニット4", "", "一般", "５級", "1995/4/3"], ["1997/9/2", "357", "技術部/機械第１課", "", "一般", "５級", "2020/4/1"], ["2001/4/15", "360", "製造部/物流課/（技能職）", "", "一般", "２級", "2020/4/1"], ["2001/12/6", "361", "製造部/製造課/ユニット2", "", "一般", "２級", "2020/4/1"], ["2001/11/27", "362", "人事部/総務課", "", "一般", "３級", "2020/4/1"], ["2002/1/15", "363", "管理部/経理課", "", "一般", "３級", "2020/4/1"], ["2001/5/4", "364", "製造部/生産管理課", "", "一般", "３級", "2020/4/1"], ["1962/1/30", "366", "設備安全管理室", "室長", "嘱託社員", "９級", "1986/3/24"], ["1962/10/22", "368", "中部支店", "次長", "嘱託社員", "７級", "1986/3/24"], ["1962/11/26", "369", "品質管理部/検査課", "付課長［専門職］", "嘱託社員", "６級", "1986/3/24"], ["1963/2/11", "370", "技術部", "付次長［専門職］", "嘱託社員", "８級", "1986/3/24"], ["1963/2/16", "371", "西日本支店", "次長", "嘱託社員", "７級", "1986/3/24"], ["1963/3/20", "372", "人事部", "部長", "嘱託社員", "９級", "1986/3/24"], ["1959/2/20", "374", "本社", "常務執行役員", "嘱託社員", "", "2020/6/29"], ["1982/7/22", "375", "管理部", "", "一般", "６級", "2020/8/1"], ["1963/9/5", "376", "製造部", "部長", "嘱託社員", "９級", "1986/3/24"], ["1963/11/8", "377", "技術部", "次長", "嘱託社員", "８級", "1986/3/24"], ["1983/1/30", "378", "技術部/電気課", "", "一般", "６級", "2020/3/1"], ["1986/12/29", "381", "製造部/物流課/（技能職）", "", "一般", "４級", "2005/4/1"], ["1967/5/29", "382", "製造部/製造課/ユニット1", "", "一般〔旧定年〕", "５級", "1986/3/24"], ["1979/3/3", "384", "搬送システム事業部/技術課", "付課長［専門職］", "一般", "６級", "2020/10/1"], ["1967/8/3", "385", "製造部/製造課/ユニット3", "", "一般〔旧定年〕", "５級", "1986/3/24"], ["1967/9/12", "386", "北陸サービスセンター/工務課", "課長", "一般〔旧定年〕", "７級", "1986/3/24"], ["1967/9/25", "387", "工務部", "付次長［専門職］", "一般〔旧定年〕", "７級", "1986/3/24"], ["1967/10/3", "388", "製造部/物流課/（技能職）", "", "一般〔旧定年〕", "５級", "1986/3/24"], ["1986/5/17", "389", "製造部/製造課/ユニット2", "", "一般", "４級", "2005/4/1"], ["1994/5/7", "390", "工務部/工務課", "", "一般", "５級", "2019/4/1"], ["1987/1/14", "392", "管理部/経理課", "", "一般", "６級", "2005/4/1"], ["1984/1/5", "394", "中部支店/営業課", "課長", "一般", "６級", "2005/8/1"], ["1997/1/24", "395", "技術部/機械第２課", "", "一般", "５級", "2019/4/1"], ["1996/5/24", "397", "技術部/機械第１課", "", "一般", "５級", "2019/4/1"], ["1993/12/4", "398", "技術部/機械第２課", "", "一般", "５級", "2019/4/1"], ["1994/5/1", "399", "搬送システム事業部/技術課", "", "一般", "５級", "2019/4/1"], ["2000/7/29", "400", "製造部/製造課/ユニット4", "", "一般", "２級", "2019/4/1"], ["2001/3/5", "401", "製造部/製造課/ユニット3", "", "一般", "３級", "2019/4/1"], ["1970/7/19", "404", "製造部/製造課/ユニット4", "", "一般", "３級", "2005/11/1"], ["1961/2/5", "405", "北陸サービスセンター", "次長", "嘱託社員", "７級", "1986/4/21"], ["1980/1/3", "410", "製造部/購買課", "課長", "一般", "６級", "2020/12/1"], ["1980/9/17", "414", "西日本支店/庶務課", "", "一般", "５級", "2021/1/12"], ["1980/6/27", "415", "北海道支店/営業課", "付課長［専門職］", "一般", "６級", "2021/3/1"], ["1978/2/1", "417", "北海道支店/工務課", "付課長［専門職］", "一般", "６級", "2021/4/1"], ["1963/8/30", "418", "工務部/工務課", "付課長［専門職］", "嘱託社員", "６級", "1987/3/23"], ["1963/9/10", "419", "製造部/生産管理課", "付課長［専門職］", "嘱託社員", "７級", "1987/3/23"], ["1963/10/28", "420", "製造部/物流課", "付課長［専門職］", "嘱託社員", "７級", "1990/9/3"], ["1978/2/5", "422", "製造部/製造課/ユニット1", "", "一般", "５級", "1996/4/1"], ["1964/11/19", "428", "業務部", "部長", "嘱託社員", "９級", "1987/3/23"], ["1965/1/25", "429", "搬送システム事業部/工務課", "付課長［専門職］", "嘱託社員", "６級", "1987/3/23"], ["1965/1/17", "430", "東北支店/工務課", "", "嘱託社員", "５級", "1987/3/23"], ["2000/12/28", "431", "業務部/業務課", "", "一般", "３級", "2026/4/1"], ["2002/4/19", "433", "技術部/企画設計課", "", "一般", "３級", "2026/4/1"], ["2003/8/20", "434", "搬送システム事業部/技術課", "", "一般", "３級", "2026/4/1"], ["2003/1/31", "435", "技術部/機械第１課", "", "一般", "３級", "2026/4/1"], ["1977/8/11", "436", "製造部/製造課", "", "一般", "５級", "1996/4/1"], ["2002/2/28", "437", "技術部/機械第２課", "", "一般", "３級", "2026/4/1"], ["2003/10/11", "438", "搬送システム事業部/サービス課", "", "一般", "３級", "2026/4/1"], ["1969/1/28", "439", "製造部/製造課/ユニット1", "主任", "一般〔旧定年〕", "６級", "1987/3/23"], ["1987/9/29", "440", "製造部/製造課/ユニット3", "", "一般", "４級", "2006/4/3"], ["2000/1/15", "441", "工務部/工務課", "", "一般", "３級", "2026/4/1"], ["1987/10/8", "442", "人事部/総務課", "付課長［専門職］", "一般", "６級", "2006/4/3"], ["2003/5/7", "443", "工務部/工務課", "", "一般", "３級", "2026/4/1"], ["2002/7/18", "445", "製造部/購買課", "", "一般", "３級", "2026/4/1"], ["2007/4/11", "446", "製造部/製造課/ユニット1", "", "一般", "１級", "2026/4/1"], ["2007/7/5", "447", "製造部/製造課/ユニット3", "", "一般", "１級", "2026/4/1"], ["2007/6/29", "448", "製造部/製造課/ユニット3", "", "一般", "１級", "2026/4/1"], ["2007/1/26", "449", "北陸サービスセンター/工務課", "", "一般", "１級", "2026/4/1"], ["2007/10/19", "450", "東北支店/工務課", "", "一般", "１級", "2026/4/1"], ["1964/3/18", "452", "技術部", "付次長［専門職］", "嘱託社員", "８級", "1988/3/22"], ["1965/5/19", "453", "製造部", "付次長［専門職］", "嘱託社員", "７級", "1988/3/22"], ["1965/8/20", "454", "営業本部", "付次長［専門職］", "嘱託社員", "７級", "1988/3/22"], ["1966/1/30", "455", "技術部", "副部長", "一般〔旧定年〕", "８級", "1988/3/22"], ["1985/1/9", "456", "搬送システム事業部/技術課", "付課長［専門職］", "一般", "６級", "2007/4/2"], ["1999/2/27", "457", "人事部/総務課", "", "一般", "４級", "2021/4/1"], ["1974/5/27", "458", "技術部/機械第１課", "", "一般", "６級", "1997/4/1"], ["1998/8/27", "459", "営業本部/営業課", "", "一般", "４級", "2021/4/1"], ["1998/11/18", "460", "西日本支店/営業課", "", "一般", "４級", "2021/4/1"], ["2003/8/13", "461", "北陸サービスセンター/工務課", "", "一般", "３級", "2026/4/1"], ["1989/2/18", "462", "製造部/製造課/ユニット2", "", "一般", "４級", "2007/4/2"], ["1998/1/7", "463", "東北支店/工務課", "", "一般", "４級", "2021/4/1"], ["1970/1/15", "464", "製造部/購買課", "", "一般〔旧定年〕", "６級", "1988/3/22"], ["1998/12/15", "466", "技術部/電気課", "", "一般", "４級", "2021/4/1"], ["1988/5/18", "467", "人事部/人事部付/TOS出向", "", "一般", "６級", "2007/4/2"], ["1998/5/21", "468", "技術部/機械第２課", "", "一般", "４級", "2021/4/1"], ["1998/7/16", "469", "中部支店/工務課", "", "一般", "４級", "2021/4/1"], ["1994/4/26", "470", "中部支店/工務課", "", "一般", "４級", "2026/4/1"], ["1980/12/14", "471", "業務部/業務課", "", "一般", "４級", "2007/7/25"], ["2003/1/21", "475", "製造部/製造課/ユニット3", "", "一般", "２級", "2021/4/1"], ["2002/5/25", "477", "管理部/経理課", "", "一般", "３級", "2021/4/1"], ["2003/1/15", "478", "製造部/生産管理課", "", "一般", "３級", "2021/4/1"], ["1985/9/9", "479", "搬送システム事業部/工務課", "課長", "一般", "７級", "2008/4/1"], ["1967/5/18", "481", "営業本部/営業企画室", "室長", "一般〔旧定年〕", "８級", "2022/10/1"], ["1965/9/21", "482", "中部支店", "次長", "嘱託社員", "８級", "1989/2/1"], ["1984/6/15", "483", "技術部/機械第２課", "", "一般", "６級", "2008/4/1"], ["1964/12/13", "484", "技術部", "次長", "嘱託社員", "８級", "1989/3/22"], ["1965/1/11", "485", "技術部", "部長", "嘱託社員", "９級", "1989/3/22"], ["1965/7/19", "486", "技術部", "付次長［専門職］", "嘱託社員", "８級", "1989/3/22"], ["1965/8/2", "487", "西日本支店", "付次長［専門職］", "嘱託社員", "７級", "1989/3/22"], ["1981/8/13", "489", "北陸サービスセンター/営業課", "課長", "一般", "６級", "2021/5/17"], ["1987/6/9", "491", "東北支店/工務課", "課長", "一般", "６級", "2021/8/1"], ["1966/10/15", "492", "工務部", "部長", "一般〔旧定年〕", "９級", "1989/3/22"], ["1987/11/26", "493", "東北支店/営業課", "", "一般", "６級", "2026/4/16"], ["1989/6/27", "496", "製造部/製造課/ユニット2", "", "一般", "４級", "2008/4/1"], ["1989/9/7", "497", "製造部/製造課/ユニット3", "", "一般", "４級", "2008/4/1"], ["1997/9/15", "498", "東北支店/工務課", "", "一般", "４級", "2022/3/1"], ["1970/12/10", "499", "製造部/物流課/（技能職）", "", "一般〔旧定年〕", "４級", "1989/3/22"], ["1974/4/22", "500", "北海道支店/庶務課", "", "一般", "５級", "2009/1/1"], ["1978/8/3", "501", "北陸サービスセンター/庶務課", "", "一般", "５級", "2009/1/5"], ["1998/5/28", "503", "搬送システム事業部/サービス課", "", "一般", "４級", "2022/4/1"], ["1985/4/21", "504", "搬送システム事業部/営業課", "課長", "一般", "７級", "2009/4/1"], ["1986/6/13", "505", "技術部/電気課", "課長", "一般", "７級", "2009/4/1"], ["1986/4/9", "506", "技術部/機械第１課", "課長", "一般", "７級", "2009/4/1"], ["1985/9/10", "507", "技術部/機械第２課", "課長", "一般", "７級", "2009/4/1"], ["1996/10/18", "508", "北海道支店/営業課", "", "一般", "４級", "2022/4/1"], ["1996/8/21", "509", "北陸サービスセンター/工務課", "", "一般", "４級", "2022/4/1"], ["1990/12/14", "510", "工務部/工務課", "", "一般", "５級", "2009/4/1"], ["1990/12/27", "511", "製造部/製造課/ユニット2", "", "一般", "４級", "2009/4/1"], ["2000/1/11", "512", "北海道支店/工務課", "", "一般", "４級", "2022/4/1"], ["2000/3/29", "515", "工務部/工務課", "", "一般", "４級", "2022/4/1"], ["1998/11/25", "518", "工務部/工務課", "", "一般", "４級", "2022/4/1"], ["2004/1/17", "519", "製造部/製造課/ユニット1", "", "一般", "２級", "2022/4/1"], ["2004/2/3", "520", "製造部/製造課/ユニット4", "", "一般", "１級", "2022/4/1"], ["1992/5/9", "521", "搬送システム事業部/技術課", "", "一般", "６級", "2022/4/18"], ["1990/3/21", "522", "製造部/購買課", "", "一般", "５級", "2022/6/13"], ["1969/11/15", "524", "海外事業室", "室長", "一般〔旧定年〕", "８級", "2022/4/15"], ["1987/7/18", "525", "営業本部/営業課", "課長", "一般", "７級", "2010/4/1"], ["1967/8/2", "528", "品質管理部/品質管理課", "", "一般〔旧定年〕", "６級", "1990/4/2"], ["1967/1/23", "530", "製造部", "次長", "一般〔旧定年〕", "７級", "1990/4/2"], ["1967/8/3", "531", "技術部/積算課", "", "一般〔旧定年〕", "６級", "1990/4/2"], ["1985/2/10", "533", "人事部/人事部付/SSY出向", "付課長［専門職］", "一般", "７級", "2022/12/16"], ["1972/3/24", "534", "製造部/製造課/ユニット1", "", "一般", "５級", "1990/4/2"], ["1986/4/12", "535", "北海道支店/営業課", "課長", "一般", "７級", "2010/4/1"], ["1973/6/8", "537", "業務部", "次長", "一般", "８級", "1998/4/1"], ["1987/4/18", "538", "技術部/電気課", "", "一般", "６級", "2010/4/1"], ["1975/3/27", "539", "管理部/経理課", "付課長［専門職］", "一般", "６級", "1998/4/1"], ["1974/7/9", "540", "人事部", "副部長", "一般", "８級", "1998/4/1"], ["1967/10/16", "544", "搬送システム事業部", "付次長［専門職］", "一般〔旧定年〕", "８級", "2023/3/1"], ["1979/6/28", "545", "製造部/製造課/ユニット1", "", "一般", "５級", "1998/4/1"], ["1988/1/29", "546", "技術部/機械第２課", "", "一般", "６級", "2010/4/1"], ["1987/1/22", "547", "技術部/機械第２課", "", "一般", "６級", "2017/10/2"], ["1992/1/13", "550", "製造部/物流課/（技能職）", "", "一般", "４級", "2010/4/1"], ["1991/9/12", "553", "製造部/物流課/（技能職）", "", "一般", "４級", "2010/4/1"], ["1963/7/20", "554", "中部支店", "支店長", "嘱託社員", "９級", "1990/10/1"], ["1963/10/16", "556", "製造部/物流課", "", "嘱託社員", "６級", "1990/12/17"], ["1991/11/5", "558", "製造部/製造課/ユニット2", "副主任", "一般", "４級", "2010/4/1"], ["1972/7/13", "560", "工務部/工務課", "付課長［専門職］", "一般", "６級", "2010/8/16"], ["1968/6/13", "564", "北陸サービスセンター", "所長", "一般〔旧定年〕", "８級", "1991/4/1"], ["1979/12/7", "565", "搬送システム事業部/搬送システム事業部付/ATS出向", "", "一般", "４級", "1998/4/1"], ["1968/2/13", "567", "搬送システム事業部", "副部長", "一般〔旧定年〕", "８級", "1991/4/1"], ["1967/10/30", "568", "業務部", "付副部長［専門職］", "一般〔旧定年〕", "７級", "1991/4/1"], ["1967/11/8", "569", "新規事業室/新規事業室付/ＡＲＭ出向", "付副部長［専門職］", "一般〔旧定年〕", "７級", "1991/4/1"], ["1966/6/15", "572", "製造部", "副部長", "一般〔旧定年〕", "８級", "1991/4/1"], ["1968/3/17", "573", "工務部/工務課", "付課長［専門職］", "一般〔旧定年〕", "６級", "1991/4/1"], ["1973/2/7", "577", "工務部/工務課", "付課長［専門職］", "一般", "６級", "1991/4/1"], ["1972/10/26", "578", "製造部/製造課/ユニット2", "", "一般", "５級", "1991/4/1"], ["1992/8/11", "581", "製造部/製造課/ユニット3", "副主任", "一般", "４級", "2011/4/1"], ["1992/8/15", "583", "製造部/製造課/ユニット4", "副主任", "一般", "４級", "2011/4/1"], ["1978/10/10", "584", "北海道支店/庶務課", "", "一般", "５級", "2011/5/9"], ["1963/4/10", "595", "製造部/購買課", "", "嘱託社員", "６級", "1991/7/22"], ["1956/12/14", "598", "東北支店/工務課", "", "嘱託社員", "６級", "1991/9/21"], ["2000/4/1", "999", "業務部", "室長", "", "", "2025/12/1"]];
+
+function calcAge(b){
+  const m=b.match(/(\d{4})\/(\d+)\/(\d+)/);
+  if(!m)return null;
+  const now=new Date(2026,3,1);
+  const birth=new Date(+m[1],+m[2]-1,+m[3]);
+  let a=now.getFullYear()-birth.getFullYear();
+  if(now<new Date(now.getFullYear(),birth.getMonth(),birth.getDate()))a--;
+  return a;
+}
+
+const BASE_YEAR=2026;
+
+// 等級→概算年収マップ（万円）
+const GRADE_SALARY={'１級':300,'２級':350,'３級':400,'４級':450,'５級':500,'６級':650,'７級':800,'８級':1000,'９級':1200};
+
+function calcTenure(hireDate){
+  if(!hireDate)return 0;
+  const m=hireDate.match(/(\d{4})\/(\d+)\/(\d+)/);
+  if(!m)return 0;
+  const now=new Date(2026,3,1);
+  const hire=new Date(+m[1],+m[2]-1,+m[3]);
+  return Math.max(0,Math.floor((now-hire)/(1000*60*60*24*365.25)));
+}
+
+const EMPLOYEES=RAW.map((r,i)=>{
+  const age=calcAge(r[0]);
+  if(!age)return null;
+  const dept=r[2]||'未所属';
+  const parts=dept.split('/');
+  const topDept=parts[0];
+  const fullDept=dept;
+  const roleStr=r[3]||'';
+  const employ=r[4]||'一般';
+  const grade=r[5]||'';
+  const hireDate=r[6]||'';
+  const tenure=calcTenure(hireDate);
+  const salary=GRADE_SALARY[grade]||0;
+  const isShokutaku=employ.includes('嘱託')||employ.includes('契約')||employ.includes('パート')||employ.includes('役員');
+  return{id:i,dept,topDept,fullDept,age,roleStr,employ,grade,hireDate,tenure,salary,isShokutaku};
+}).filter(Boolean);
+
+// ── 役職グループ分類 ──
+function getRoleGroup(roleStr){
+  if(!roleStr)return 'general';
+  if(roleStr.match(/代表取締役|取締役|執行役員|常務|上席/))return 'executive';
+  if(roleStr.match(/部長|副部長|所長|支店長/))return 'bucho';
+  if(roleStr.match(/次長|室長|付次長|付副部長/))return 'jicho';
+  if(roleStr.match(/課長|付課長/))return 'kacho';
+  return 'general';
+}
+
+const ROLE_GROUP_LABELS={executive:'役員・執行役員',bucho:'部長・副部長・支店長・所長',jicho:'次長・室長',kacho:'課長・付課長',general:'一般'};
+const ROLE_GROUP_COLORS={executive:{bg:'#4a1b0c',tx:'#fff'},bucho:{bg:'#1e3a5f',tx:'#fff'},jicho:{bg:'#1e4d2b',tx:'#fff'},kacho:{bg:'#1a5276',tx:'#fff'},general:{bg:'#e8e8e8',tx:'#555'}};
+
+const DEPT_ORDER=['人事部','管理部','新規事業室','技術部','製造部','工務部','品質管理部','本社','海外事業室','業務部','搬送システム事業部','営業企画室','事業開発室','営業本部','設備安全管理室','西日本支店','北陸サービスセンター','中部支店','北海道支店','東北支店'];
+const ALL_TOP=[...new Set(EMPLOYEES.map(e=>e.topDept))];
+const TOP_DEPTS=[...DEPT_ORDER.filter(d=>ALL_TOP.includes(d)),...ALL_TOP.filter(d=>!DEPT_ORDER.includes(d)).sort()];
+
+const SUB_ORDER={'技術部':['技術部/電気課','技術部/機械第１課','技術部/機械第２課','技術部/企画設計課','技術部/積算課','技術部/技術管理課'],'製造部':['製造部/生産管理課','製造部/物流課','製造部/購買課','製造部/生産技術課','製造部/製造課'],'製造部/製造課':['製造部/製造課/ユニット1','製造部/製造課/ユニット2','製造部/製造課/ユニット3','製造部/製造課/ユニット4'],'品質管理部':['品質管理部/品質管理課','品質管理部/技術サービス課','品質管理部/検査課'],'業務部':['業務部/秘書課','業務部/業務課'],'搬送システム事業部':['搬送システム事業部/技術課','搬送システム事業部/サービス課','搬送システム事業部/工務課','搬送システム事業部/営業課'],'営業本部':['営業本部/営業課','営業本部/アジア市場開拓室','営業本部/営業企画室'],'西日本支店':['西日本支店/営業課','西日本支店/工務課','西日本支店/庶務課','西日本支店/福岡営業所'],'北陸サービスセンター':['北陸サービスセンター/営業課','北陸サービスセンター/工務課','北陸サービスセンター/庶務課'],'中部支店':['中部支店/営業課','中部支店/工務課','中部支店/庶務課','中部支店/高山サービスセンター'],'北海道支店':['北海道支店/営業課','北海道支店/工務課','北海道支店/庶務課'],'東北支店':['東北支店/営業課','東北支店/工務課','東北支店/庶務課'],'工務部':['工務部/工務課'],'人事部':['人事部/総務課'],'管理部':['管理部/経理課']};
+function sortedSubs(pk,subs){const o=SUB_ORDER[pk]||[];return[...o.filter(s=>subs.includes(s)),...subs.filter(s=>!o.includes(s)).sort()];}
+
+const AGE_BANDS=[{label:'60歳以上',min:60,max:999},{label:'50代',min:50,max:59},{label:'40代',min:40,max:49},{label:'30代',min:30,max:39},{label:'20代',min:20,max:29}];
+
+// ── DEPT color palette ──
+const PALETTE=['#2c5f8a','#2e7d5e','#7b3f00','#6d2b8a','#1a5a5a','#8a2c2c','#4a6b2c','#2c4a8a','#8a5c2c','#2c8a6b','#6b4a8a','#8a7b2c'];
+const cm={};TOP_DEPTS.forEach((t,i)=>{cm[t]={bg:PALETTE[i%PALETTE.length]+'22',bd:PALETTE[i%PALETTE.length]};});
+
+// ══════════════════════════════
+//  KPI
+// ══════════════════════════════
+function renderKPI(){
+  const ages=EMPLOYEES.map(e=>e.age);
+  const avg=(ages.reduce((a,b)=>a+b,0)/ages.length).toFixed(1);
+  const over50=EMPLOYEES.filter(e=>e.age>=50).length;
+  const under30=EMPLOYEES.filter(e=>e.age<30).length;
+  const retire3y=EMPLOYEES.filter(e=>e.age>=62&&e.age<65).length;
+  const pct50=Math.round(over50/EMPLOYEES.length*100);
+  document.getElementById('kpi-row').innerHTML=`
+    <div class="kpi-card c-total"><div class="kpi-label">総在籍人数</div><div class="kpi-val">${EMPLOYEES.length}<span style="font-size:14px;font-weight:400;color:#aaa;">名</span></div><div class="kpi-sub">正規・嘱託・契約含む</div></div>
+    <div class="kpi-card c-avg"><div class="kpi-label">平均年齢</div><div class="kpi-val">${avg}<span style="font-size:14px;font-weight:400;color:#aaa;">歳</span></div><div class="kpi-sub">全社員</div></div>
+    <div class="kpi-card c-retire"><div class="kpi-label">3年以内の定年退職予定</div><div class="kpi-val">${retire3y}<span style="font-size:14px;font-weight:400;color:#aaa;">名</span></div><span class="kpi-badge badge-warn">⚠ 要注意</span></div>
+    <div class="kpi-card c-young"><div class="kpi-label">30歳未満</div><div class="kpi-val">${under30}<span style="font-size:14px;font-weight:400;color:#aaa;">名</span></div><div class="kpi-sub">${Math.round(under30/EMPLOYEES.length*100)}%</div></div>
+    <div class="kpi-card c-shortage"><div class="kpi-label">50歳以上の割合</div><div class="kpi-val">${pct50}<span style="font-size:14px;font-weight:400;color:#aaa;">%</span></div><span class="kpi-badge ${pct50>=40?'badge-warn':'badge-ok'}">${pct50>=40?'高齢化リスク':'適正範囲'}</span></div>`;
+}
+
+// ══════════════════════════════
+//  OVERVIEW
+// ══════════════════════════════
+function renderOverview(){
+  const offset=+(document.getElementById('ov-yr-slider')||{value:0}).value||0;
+  const teinen=+(document.getElementById('ov-teinen')||{value:65}).value||65;
+  const year=BASE_YEAR+offset;
+
+  // Update year display
+  const yrDisp=document.getElementById('ov-yr-disp');
+  const yrNote=document.getElementById('ov-yr-note');
+  if(yrDisp) yrDisp.textContent=year+'年';
+  if(yrNote) yrNote.textContent=offset===0?'現在':offset+'年後';
+
+  // Apply offset: filter out retired
+  const active=EMPLOYEES.map(e=>({...e,curAge:e.age+offset})).filter(e=>e.curAge<teinen);
+
+  // ── Overview KPI (offset-aware) ──
+  const ovKpi=document.getElementById('ov-kpi-row');
+  if(ovKpi){
+    const ages=active.map(e=>e.curAge);
+    const avg=ages.length?(ages.reduce((a,b)=>a+b,0)/ages.length).toFixed(1):'—';
+    const over50=active.filter(e=>e.curAge>=50).length;
+    const under30=active.filter(e=>e.curAge<30).length;
+    const retire3y=active.filter(e=>e.curAge>=teinen-3).length;
+    const pct50=active.length?Math.round(over50/active.length*100):0;
+    ovKpi.innerHTML=
+      '<div class="kpi-card c-total"><div class="kpi-label">在籍人数（'+year+'年）</div><div class="kpi-val">'+active.length+'<span style="font-size:14px;font-weight:400;color:#aaa;">名</span></div><div class="kpi-sub">'+(EMPLOYEES.length-active.length)+'名が定年退職済</div></div>'
+      +'<div class="kpi-card c-avg"><div class="kpi-label">平均年齢</div><div class="kpi-val">'+avg+'<span style="font-size:14px;font-weight:400;color:#aaa;">歳</span></div></div>'
+      +'<div class="kpi-card c-retire"><div class="kpi-label">3年以内の定年退職予定</div><div class="kpi-val">'+retire3y+'<span style="font-size:14px;font-weight:400;color:#aaa;">名</span></div><span class="kpi-badge badge-warn">⚠ 要注意</span></div>'
+      +'<div class="kpi-card c-young"><div class="kpi-label">30歳未満</div><div class="kpi-val">'+under30+'<span style="font-size:14px;font-weight:400;color:#aaa;">名</span></div><div class="kpi-sub">'+Math.round(under30/Math.max(active.length,1)*100)+'%</div></div>'
+      +'<div class="kpi-card c-shortage"><div class="kpi-label">50歳以上の割合</div><div class="kpi-val">'+pct50+'<span style="font-size:14px;font-weight:400;color:#aaa;">%</span></div><span class="kpi-badge '+(pct50>=40?'badge-warn':'badge-ok')+'">'+(pct50>=40?'高齢化リスク':'適正範囲')+'</span></div>';
+  }
+
+  // ── Age bars (offset-aware) ──
+  const bins=[[20,29,'#3b82f6'],[30,39,'#10b981'],[40,49,'#f59e0b'],[50,59,'#ef4444'],[60,69,'#dc2626'],[70,99,'#9ca3af']];
+  const maxV=Math.max(...bins.map(([a,b])=>active.filter(e=>e.curAge>=a&&e.curAge<=b).length),1);
+  document.getElementById('age-bars').innerHTML=bins.map(([a,b,c])=>{
+    const cnt=active.filter(e=>e.curAge>=a&&e.curAge<=b).length;
+    return '<div class="age-bar-row"><span class="age-bar-label">'+a+'〜'+b+'歳</span><div class="age-bar-track"><div class="age-bar-fill" style="width:'+Math.round(cnt/maxV*100)+'%;background:'+c+';"></div></div><span class="age-bar-cnt">'+cnt+'名</span></div>';
+  }).join('');
+
+  // ── Dept avg (offset-aware) ──
+  const deptAvg=TOP_DEPTS.map(d=>{
+    const em=active.filter(e=>e.topDept===d);
+    const av=em.length?(em.reduce((s,e)=>s+e.curAge,0)/em.length).toFixed(1):0;
+    return{dept:d,avg:+av,cnt:em.length};
+  }).filter(d=>d.cnt>0).sort((a,b)=>b.avg-a.avg);
+  const maxA=Math.max(...deptAvg.map(d=>d.avg),1);
+  document.getElementById('dept-age-rank').innerHTML=deptAvg.map(d=>{
+    const bar='<div class="dept-avg-track"><div class="dept-avg-fill" style="width:'+Math.round(d.avg/maxA*100)+'%;background:'+(d.avg>=52?'#ef4444':d.avg>=47?'#f59e0b':'#3b82f6')+';""></div></div>';
+    return '<div class="dept-avg-row"><span class="dept-avg-name">'+d.dept+'</span>'+bar+'<span class="dept-avg-val">'+d.avg+'歳</span></div>';
+  }).join('');
+
+  // ── Role distribution (offset-aware) ──
+  const groups=['executive','bucho','jicho','kacho','general'];
+  const counts={};groups.forEach(g=>{counts[g]=active.filter(e=>getRoleGroup(e.roleStr)===g).length;});
+  const roleCells=groups.map(g=>{
+    const c=ROLE_GROUP_COLORS[g];
+    return '<div style="text-align:center;"><div style="background:'+c.bg+';color:'+c.tx+';border-radius:8px;padding:14px 6px;margin-bottom:6px;"><div style="font-family:Georgia,serif;font-size:22px;font-weight:700;">'+counts[g]+'</div><div style="font-size:9px;opacity:0.8;margin-top:2px;">名</div></div><div style="font-size:10px;color:#888;line-height:1.3;">'+ROLE_GROUP_LABELS[g]+'</div></div>';
+  }).join('');
+  document.getElementById('role-dist').innerHTML='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;">'+roleCells+'</div>';
+}
+
+// ══════════════════════════════
+//  GRID (aggregate version)
+// ══════════════════════════════
+function getRules(){
+  const el=document.getElementById('r6');
+  return{teinen:el?+el.value||65:65};
+}
+
+function renderGrid(){
+  const offset=+document.getElementById('g-yr-slider').value;
+  const year=BASE_YEAR+offset;
+  document.getElementById('g-yr-disp').textContent=year+'年';
+  document.getElementById('g-yr-note').textContent=offset===0?'現在':offset+'年後';
+  const rules=getRules();
+  const showShokutaku=document.getElementById('g-shokutaku').checked;
+  const deptFilter=document.getElementById('g-dept-filter').value;
+
+  const emps=EMPLOYEES.filter(e=>(showShokutaku||!e.isShokutaku)&&(!deptFilter||e.topDept===deptFilter||e.fullDept===deptFilter));
+  const state=emps.map(e=>{
+    const ca=e.age+offset;
+    const retired=ca>=rules.teinen;
+    const nearRetire=!retired&&ca>=rules.teinen-3;
+    return{...e,curAge:ca,retired,nearRetire};
+  });
+
+  const act=state.filter(e=>!e.retired).length;
+  const retCnt=state.filter(e=>e.retired).length;
+  const warn=state.filter(e=>!e.retired&&e.nearRetire).length;
+  document.getElementById('g-alert-area').innerHTML=warn>0?`<div class="alert-strip"><svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>${year}年時点：在籍 <strong>${act}名</strong>　累計退職 <strong style="color:#c0392b;">${retCnt}名</strong>　定年3年以内 <strong style="color:#c0392b;">${warn}名</strong></div>`:'<div style="margin-bottom:10px;font-size:11px;color:#888;">在籍 '+act+'名　累計退職 '+retCnt+'名</div>';
+
+  // ── グリッドKPI概況 ──
+  const activeState=state.filter(e=>!e.retired);
+  const avgAge=activeState.length?(activeState.reduce((s,e)=>s+e.curAge,0)/activeState.length).toFixed(1):'—';
+  const under30=activeState.filter(e=>e.curAge<30).length;
+  const over50pct=activeState.length?Math.round(activeState.filter(e=>e.curAge>=50).length/activeState.length*100):0;
+  const scopeLabel=deptFilter?'【'+deptFilter+'】':'【全社】';
+  const kpiHtml='<div class="grid-kpi-scope" style="grid-column:1/-1;">'+scopeLabel+' '+year+'年時点の概況</div>'
+    +'<div class="grid-kpi gk-total"><div class="grid-kpi-label">在籍人数</div><div class="grid-kpi-val">'+act+'<span class="gu">名</span></div>'+(retCnt>0?'<div class="grid-kpi-sub warn">累計退職 '+retCnt+'名</div>':'<div class="grid-kpi-sub">退職者なし</div>')+'</div>'
+    +'<div class="grid-kpi gk-avg"><div class="grid-kpi-label">平均年齢</div><div class="grid-kpi-val">'+avgAge+'<span class="gu">歳</span></div><div class="grid-kpi-sub">在籍者のみ</div></div>'
+    +'<div class="grid-kpi gk-retire"><div class="grid-kpi-label">定年3年以内</div><div class="grid-kpi-val">'+warn+'<span class="gu">名</span></div>'+(warn>0?'<div class="grid-kpi-sub warn">⚠ 要対応</div>':'<div class="grid-kpi-sub">該当なし</div>')+'</div>'
+    +'<div class="grid-kpi gk-young"><div class="grid-kpi-label">30歳未満</div><div class="grid-kpi-val">'+under30+'<span class="gu">名</span></div><div class="grid-kpi-sub">'+(activeState.length?Math.round(under30/activeState.length*100):0)+'%</div></div>'
+    +'<div class="grid-kpi gk-old"><div class="grid-kpi-label">50歳以上の割合</div><div class="grid-kpi-val">'+over50pct+'<span class="gu">%</span></div><div class="grid-kpi-sub">'+(over50pct>=40?'⚠ 高齢化リスク':'適正範囲')+'</div></div>';
+  document.getElementById('g-kpi-row').innerHTML=kpiHtml;
+
+  // Build aggregate table
+  const GBC_BD=['#2c5f8a','#2e7d5e','#7b3f00','#6d2b8a','#1a5a5a','#8a2c2c','#4a6b2c','#2c4a8a','#8a5c2c','#2c8a6b','#6b4a8a','#8a7b2c'];
+
+  // セル単位の最大値：どの部署×年齢帯の組み合わせでも最も多い1セルを100%の基準にする
+  const globalMaxN=(()=>{
+    const depts=[...new Set(state.filter(e=>!e.retired).map(e=>e.fullDept))];
+    let mx=1;
+    depts.forEach(dept=>{
+      AGE_BANDS.forEach(band=>{
+        const n=state.filter(e=>!e.retired&&e.fullDept===dept&&e.curAge>=band.min&&e.curAge<=band.max).length;
+        if(n>mx)mx=n;
+      });
+    });
+    return mx;
+  })();
+
+  function ageCells(deptMembers){
+    const bandCells=AGE_BANDS.map(band=>{
+      const ms=deptMembers.filter(e=>!e.retired&&e.curAge>=band.min&&e.curAge<=band.max);
+      const warnMs=ms.filter(e=>e.nearRetire);
+      const n=ms.length;
+
+      if(!n) return '<td class="mc mc-empty" style="vertical-align:middle;"><span style="color:#ccc;font-size:11px;">—</span></td>';
+
+      const isWarn=warnMs.length>0;
+      // バー幅：全体最大を基準にした相対値（横断比較ができる）
+      const barPct=Math.round(n/globalMaxN*100);
+
+      // セル背景：人数に応じた濃度、警告は赤系
+      const alpha=Math.min(0.05+n/globalMaxN*0.5,0.5);
+      const heatBg=isWarn
+        ?'background:rgba(220,53,69,'+alpha+');'
+        :'background:rgba(44,95,138,'+alpha+');';
+
+      // 役職ドット
+      const roleColors={executive:'#e53e3e',bucho:'#2b6cb0',jicho:'#38a169',kacho:'#00b5d8',general:'#a0aec0'};
+      const dots=ms.map(e=>{
+        const col=roleColors[getRoleGroup(e.roleStr)]||'#bbb';
+        const ring=e.nearRetire?'outline:1.5px solid #e74c3c;outline-offset:1px;':'';
+        return '<div class="mc-dot" style="background:'+col+';'+ring+'"></div>';
+      }).join('');
+
+      const warnBadge=isWarn?'<div class="mc-warn-badge">⚠'+warnMs.length+'</div>':'';
+      const barColor=isWarn?'#e74c3c':'#2c5f8a';
+
+      return '<td class="mc '+(isWarn?'mc-warn':'mc-normal')+'" style="'+heatBg+';vertical-align:top;">'
+        +warnBadge
+        +'<div class="mc-inner">'
+        +'<span class="mc-count">'+n+'</span><span class="mc-unit">名</span>'
+        +'<div class="mc-bar-wrap"><div class="mc-bar" style="width:'+barPct+'%;background:'+barColor+';"></div></div>'
+        +'<div class="mc-role-dots">'+dots+'</div>'
+        +'</div></td>';
+    }).join('');
+
+    // 行合計セル
+    const rowTotal=deptMembers.filter(e=>!e.retired).length;
+    const rowWarn=deptMembers.filter(e=>!e.retired&&e.nearRetire).length;
+    const totalCell='<td class="mc" style="background:#f0ede4;border-left:2px solid #bbb;vertical-align:top;">'
+      +'<div class="mc-inner">'
+      +'<span class="mc-count" style="color:#333;">'+rowTotal+'</span><span class="mc-unit">名</span>'
+      +(rowWarn>0?'<div style="font-size:9px;color:#c0392b;margin-top:2px;">⚠'+rowWarn+'名</div>':'')
+      +'</div></td>';
+
+    return bandCells+totalCell;
+  }
+
+  let rows='';
+  const filteredDepts=deptFilter?TOP_DEPTS.filter(d=>d===deptFilter||EMPLOYEES.some(e=>e.fullDept.startsWith(deptFilter)&&e.topDept===d)):TOP_DEPTS;
+
+  filteredDepts.forEach((top,ti)=>{
+    const te=state.filter(e=>e.topDept===top);
+    if(!te.length)return;
+    const bdColor=GBC_BD[ti%GBC_BD.length];
+    const bgColor=bdColor+'18';
+
+    const subs=[...new Set(te.filter(e=>e.fullDept!==top).map(e=>{const p=e.fullDept.split('/');return p.length>=2?p[0]+'/'+p[1]:e.fullDept;}))];
+    const sd=sortedSubs(top,subs);
+    const sf=[];
+    sd.forEach(sub=>{
+      sf.push(sub);
+      const ss=[...new Set(te.filter(e=>e.fullDept.startsWith(sub+'/')&&e.fullDept.split('/').length===3).map(e=>e.fullDept))];
+      sortedSubs(sub,ss).forEach(s=>sf.push(s));
+    });
+
+    const directMembers=state.filter(e=>e.topDept===top&&e.fullDept===top);
+    const nrows=sf.length+(directMembers.length>0?1:0)||1;
+
+    const deptCell=`<td rowspan="${nrows}" class="dept-sticky" style="background:${bdColor};border:1px solid ${bdColor};vertical-align:middle;padding:6px 4px;min-width:52px;text-align:center;"><div style="font-size:11px;font-weight:700;color:white;writing-mode:vertical-lr;letter-spacing:2px;">${top}</div></td>`;
+
+    if(sf.length===0){
+      rows+=`<tr>${deptCell}<td class="sub-sticky" style="font-size:10px;color:#999;padding:5px 10px;background:${bgColor};border:1px solid #ede9e0;font-style:italic;">部直属</td>${ageCells(te)}</tr>`;
+    } else {
+      let firstRow=true;
+      if(directMembers.length>0){
+        rows+=`<tr>${deptCell}<td class="sub-sticky" style="font-size:10px;color:#999;padding:5px 10px;background:${bgColor};border:1px solid #ede9e0;font-style:italic;">部直属</td>${ageCells(directMembers)}</tr>`;
+        firstRow=false;
+      }
+      sf.forEach((dept,idx)=>{
+        const ds=dept.split('/').pop();
+        const ind=dept.split('/').length-2;
+        const dm=state.filter(e=>e.fullDept===dept);
+        rows+=`<tr>${firstRow&&idx===0?deptCell:''}<td class="sub-sticky" style="font-size:11px;font-weight:500;color:#2d3142;padding:5px ${8+ind*12}px;background:${bgColor};border:1px solid #ede9e0;white-space:nowrap;">${ds.length>12?ds.slice(0,12)+'…':ds}</td>${ageCells(dm)}</tr>`;
+        firstRow=false;
+      });
+    }
+  });
+
+  // ── 合計行の生成 ──
+  // 表示対象の全メンバー（絞り込み後）
+  const allShown=state.filter(e=>!e.retired&&(deptFilter?e.topDept===deptFilter||e.fullDept.startsWith(deptFilter):true));
+  const totalRowCounts=AGE_BANDS.map(band=>allShown.filter(e=>e.curAge>=band.min&&e.curAge<=band.max).length);
+  const maxTotal=Math.max(...totalRowCounts,1);
+  const grandTotal=allShown.length;
+  const grandWarn=allShown.filter(e=>e.nearRetire).length;
+
+  const totalBandCells=totalRowCounts.map(n=>{
+    if(!n)return '<td style="background:#e8e8e0;border:1px solid #ccc;text-align:center;"><span style="color:#bbb;font-size:10px;">—</span></td>';
+    return '<td style="background:#e8e4d8;border:1px solid #ccc;text-align:center;padding:6px 8px;">'
+      +'<span style="font-size:14px;font-weight:700;color:#333;">'+n+'</span><span style="font-size:10px;color:#888;">名</span>'
+      +'</td>';
+  }).join('');
+  const grandTotalCell='<td style="background:#d4cfc0;border:1px solid #aaa;border-left:2px solid #aaa;text-align:center;padding:6px 8px;">'    +'<span style="font-size:15px;font-weight:700;color:#111;">'+grandTotal+'</span><span style="font-size:10px;color:#666;">名</span>'    +(grandWarn>0?'<div style="font-size:9px;color:#c0392b;margin-top:2px;">⚠'+grandWarn+'名</div>':'')    +'</td>';
+  const totalRow='<tr style="font-weight:700;">'    +'<td class="dept-sticky" style="background:#555;color:white;text-align:center;padding:6px 4px;font-size:11px;font-weight:700;border:1px solid #444;">合計</td>'    +'<td class="sub-sticky" style="background:#e8e4d8;border:1px solid #ccc;font-size:11px;font-weight:700;padding:5px 10px;">'+(deptFilter?deptFilter:'全部署')+'</td>'    +totalBandCells+grandTotalCell+'</tr>';
+
+  // Legend for role dots
+  const dotLegend='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:#888;align-items:center;"><span style="font-weight:600;color:#555;">役職：</span>'
+    +[['executive','#e53e3e','役員'],['bucho','#2b6cb0','部長・支店長'],['jicho','#38a169','次長・室長'],['kacho','#00b5d8','課長'],['general','#a0aec0','一般']]
+    .map(x=>'<span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:'+x[1]+';display:inline-block;"></span>'+x[2]+'</span>').join('')
+    +'<span style="margin-left:8px;display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:50%;background:#e74c3c;display:inline-block;outline:2px solid #c0392b;"></span>定年3年以内</span>'
+    +'<span style="margin-left:8px;">｜ セルの色濃度＝人数の多少（青：通常　赤：退職警告）</span>'
+    +'</div>';
+  const h=dotLegend+'<table class="agg-table"><thead><tr>'
+    +'<th class="dept-th" style="min-width:52px;background:#2d3142;">部</th>'
+    +'<th class="sub-th" style="background:#2d3142;">課・室</th>'
+    +AGE_BANDS.map(b=>'<th style="min-width:110px;background:#2d3142;">'+b.label+'</th>').join('')
+    +'<th style="min-width:70px;background:#1a1a2e;border-left:2px solid #aaa;">合計</th>'
+    +'</tr></thead><tbody>'+rows+totalRow+'</tbody></table>';
+  document.getElementById('grid-canvas').innerHTML=h;
+}
+
+// ══════════════════════════════
+//  RETIRE
+// ══════════════════════════════
+function renderRetire(){
+  const ra=+document.getElementById('retire-age2').value||65;
+  let html='';
+  [1,2,3,5,10].forEach(y=>{
+    const rs=EMPLOYEES.filter(e=>e.age+y>=ra&&e.age+y-1<ra);
+    if(!rs.length)return;
+    html+=`<div class="retire-year-card">
+      <div class="retire-year-label">${BASE_YEAR+y}年（${y}年後）</div>
+      <div class="retire-year-count">${rs.length}名</div>
+      <div class="retire-chips">${rs.map(e=>{
+        const rg=getRoleGroup(e.roleStr);
+        const c=ROLE_GROUP_COLORS[rg];
+        return`<div class="retire-chip" style="background:${c.bg}20;border-color:${c.bg}40;color:${c.bg};">${e.topDept.slice(0,4)}${e.roleStr?'・'+e.roleStr.split(',')[0].replace('［専門職］','').replace('付','').trim():''}</div>`;
+      }).join('')}</div>
+    </div>`;
+  });
+  document.getElementById('retire-list').innerHTML=html||'<div style="color:#aaa;font-size:12px;">該当者なし</div>';
+}
+
+// ══════════════════════════════
+//  HIRING PLAN
+// ══════════════════════════════
+const HIRE_GROUPS=['executive','bucho','kacho','general'];
+const HIRE_LABELS={executive:'役員・執行',bucho:'部長級',kacho:'課長級',general:'一般職'};
+const YEARS=[1,2,3,5,7,10];
+let hiringPlan={};
+YEARS.forEach(y=>{HIRE_GROUPS.forEach(g=>{hiringPlan[`${y}_${g}`]=0;});});
+
+function buildHiringTable(){
+  const th='<tr><th>年度</th>'+HIRE_GROUPS.map(g=>`<th>${HIRE_LABELS[g]}</th>`).join('')+'<th>合計採用</th><th>定年退職</th><th>純増減</th></tr>';
+  const rows=YEARS.map(y=>{
+    const ra=65;
+    const retireN=EMPLOYEES.filter(e=>e.age+y>=ra&&e.age+y-1<ra).length;
+    const totalHire=HIRE_GROUPS.reduce((s,g)=>s+(hiringPlan[`${y}_${g}`]||0),0);
+    const net=totalHire-retireN;
+    const netCls=net>0?'net-positive':net<0?'net-negative':'net-zero';
+    const inputs=HIRE_GROUPS.map(g=>{const key=y+'_'+g;return '<td><input class="hiring-input" type="number" min="0" max="99" value="'+(hiringPlan[key]||0)+'" onchange="hiringPlan[\''+key+'\']= +this.value;refreshHiring();"></td>';}).join('');
+    return`<tr><td class="year-col">${BASE_YEAR+y}年 <span style="font-size:10px;color:#aaa;">+${y}年</span></td>${inputs}<td style="font-weight:600;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;">${totalHire}</td><td style="color:#c0392b;font-family:ui-monospace,'SF Mono','Menlo','Courier New',monospace;">${retireN}</td><td class="${netCls}">${net>0?'+':''}${net}</td></tr>`;
+  }).join('');
+  document.getElementById('hiring-input-table').innerHTML=`<thead>${th}</thead><tbody>${rows}</tbody>`;
+}
+
+function refreshHiring(){
+  buildHiringTable();
+  renderForecast();
+}
+
+function resetHiring(){
+  YEARS.forEach(y=>{HIRE_GROUPS.forEach(g=>{hiringPlan[`${y}_${g}`]=0;});});
+  refreshHiring();
+}
+
+function renderForecast(){
+  const ra=65;
+  let current=EMPLOYEES.length;
+  const maxN=current+50;
+  let h=`<p style="font-size:11px;color:#888;margin-bottom:12px;">採用計画反映後の総人数推移（嘱託・退職を考慮）</p>`;
+  YEARS.forEach(y=>{
+    const retireN=EMPLOYEES.filter(e=>e.age+y>=ra&&e.age+y-1<ra).length;
+    const totalHire=HIRE_GROUPS.reduce((s,g)=>s+(hiringPlan[`${y}_${g}`]||0),0);
+    const proj=current-retireN+totalHire;
+    const baseW=Math.round((current/maxN)*100);
+    const hireW=Math.round((totalHire/maxN)*100);
+    h+=`<div class="forecast-row"><span class="forecast-year">${BASE_YEAR+y}年</span>
+      <div class="forecast-track">
+        <div class="forecast-base" style="width:${Math.min(baseW,100)}%;"></div>
+        <div class="forecast-hired" style="left:${Math.min(baseW-hireW,100)}%;width:${Math.min(hireW,100)}%;"></div>
+      </div>
+      <span class="forecast-cnt">${proj}名</span></div>`;
+    current=proj;
+  });
+  document.getElementById('forecast-chart').innerHTML=h;
+  document.getElementById('hiring-summary').innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:100px;background:var(--blue-pale);border-radius:8px;padding:10px 14px;"><div style="font-size:10px;color:var(--blue-mid);margin-bottom:3px;">現在</div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700;">${EMPLOYEES.length}名</div></div>
+      <div style="flex:1;min-width:100px;background:var(--green-pale);border-radius:8px;padding:10px 14px;"><div style="font-size:10px;color:var(--green-mid);margin-bottom:3px;">計画採用累計</div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:var(--green-mid);">${(()=>{let t=0;HIRE_GROUPS.forEach(g=>YEARS.forEach(y=>{t+=(hiringPlan[y+'_'+g]||0);}));return t;})()} 名</div></div>
+      <div style="flex:1;min-width:100px;background:var(--red-pale);border-radius:8px;padding:10px 14px;"><div style="font-size:10px;color:var(--red-alert);margin-bottom:3px;">10年間退職見込</div><div style="font-family:Georgia,serif;font-size:20px;font-weight:700;color:var(--red-alert);">${EMPLOYEES.filter(e=>e.age+10>=65).length}名</div></div>
+    </div>`;
+}
+
+// ══════════════════════════════
+//  TAB
+// ══════════════════════════════
+function showTab(name,el){
+  ['overview','grid','retire','hiring'].forEach(t=>{
+    const p=document.getElementById('tab-'+t);
+    if(p)p.classList.add('hidden');
+  });
+  const pane=document.getElementById('tab-'+name);
+  if(pane)pane.classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(name==='overview')renderOverview();
+  if(name==='grid')renderGrid();
+  if(name==='retire')renderRetire();
+  if(name==='hiring'){buildHiringTable();renderForecast();}
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show');}
+
+
+// ── MAIN TAB SWITCHER ──
+function showMainTab(name, el) {
+  document.querySelectorAll('.main-pane').forEach(p => p.classList.add('hidden'));
+  document.getElementById('main-' + name).classList.remove('hidden');
+  document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  if (name === 'story') {
+    const sp = document.getElementById('main-story');
+    if (!sp.dataset.built) {
+      sp.innerHTML = storyPaneHTML();
+      sp.dataset.built = '1';
+    }
+    onStorySlider();
+  }
+  if (name === 'exec') {
+    renderGrid();
+  }
+}
+
+function storyPaneHTML() {
+  return `<div class="year-controller">
+  <div>
+    <div class="year-big" id="yr-disp">2026<span class="yr-suffix">年</span></div>
+    <div class="year-note" id="yr-note">現在の状態を表示中</div>
+  </div>
+  <div class="slider-track">
+    <span>2026</span>
+    <input type="range" min="0" max="10" value="0" step="1" id="yr-slider" oninput="onStorySlider()">
+    <span>2036</span>
+  </div>
+  <div class="ctrl-chip">定年 <input type="number" id="teinen" value="65">歳</div>
+  <button class="recalc-btn" onclick="render()">更新</button>
+</div>
+<div class="story-main">
+
+  <!-- KPI -->
+  <div class="section-label">概況</div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Waterfall -->
+  <div class="section-label">人員増減の流れ</div>
+  <div class="section">
+    <div class="wf-wrap">
+      <div class="wf-title">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="8" width="3" height="5" rx="1" fill="#58a6ff"/><rect x="5.5" y="5" width="3" height="8" rx="1" fill="#d4a017"/><rect x="10" y="2" width="3" height="11" rx="1" fill="#3fb950"/></svg>
+        退職・採用の増減ウォーターフォール
+      </div>
+      <div class="wf-chart" id="wf-chart"></div>
+      <div class="wf-legend">
+        <div class="wf-leg"><div style="width:24px;height:3px;background:var(--blue);border-radius:2px;"></div>退職のみの場合</div>
+        <div class="wf-leg"><div style="width:24px;height:3px;background:var(--green);border-radius:2px;"></div>採用計画込み</div>
+        <div class="wf-leg"><div style="width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block;"></div>定年退職数</div>
+        <div class="wf-leg"><div style="width:10px;height:10px;border-radius:50%;background:var(--gold);display:inline-block;"></div>選択年</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hiring Proposal -->
+  <div class="section-label">採用計画（AI提案）</div>
+  <div class="section">
+    <div class="proposal-wrap">
+      <div class="proposal-header">
+        <div class="proposal-title">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="#d4a017" stroke-width="1.5"/><path d="M7 4v3l2 2" stroke="#d4a017" stroke-width="1.5" stroke-linecap="round"/></svg>
+          年度別 推奨採用数
+        </div>
+        <div class="proposal-modes">
+          <button class="mode-btn active" onclick="setHireMode('maintain',this)">現状維持</button>
+          <button class="mode-btn" onclick="setHireMode('young',this)">若手強化</button>
+          <button class="mode-btn" onclick="setHireMode('mgmt',this)">即戦力重視</button>
+        </div>
+      </div>
+      <div id="proposal-table-wrap"></div>
+      <div id="proposal-note" class="proposal-note"></div>
+    </div>
+  </div>
+
+  <!-- Pyramid -->
+  <div class="section-label">年齢構成の変化</div>
+  <div class="section">
+    <div class="pyramid-wrap">
+      <div class="pyramid-title">年齢ピラミッド</div>
+      <div class="pyramid-sub" id="pyr-sub">現在 vs スライダー年の比較</div>
+      <div id="pyramid-chart"></div>
+      <div class="pyr-legend" id="pyr-legend">
+        <div class="pyr-leg"><div class="pyr-leg-sq" style="background:#58a6ff55;border:1px solid var(--blue);"></div>2026年（現在）</div>
+        <div class="pyr-leg"><div class="pyr-leg-sq" style="background:var(--gold);opacity:0.5;"></div>選択年（採用なし）</div>
+        <div class="pyr-leg"><div class="pyr-leg-sq" style="background:var(--green);"></div>選択年（採用計画込み）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dept Risk Timeline -->
+  <div class="section-label">部署別リスクマップ</div>
+  <div class="section">
+    <div class="risk-wrap">
+      <div class="risk-title">部署別 定年退職リスク（今後10年）</div>
+      <div class="risk-sub">各セルは各年度の退職予定人数。赤いほど緊急度が高い。</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table class="risk-table" id="risk-table"></table>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ② 後継者不在リスク -->
+  <div class="section-label">② 後継者・後任不在リスク</div>
+  <div class="section">
+    <div class="wf-wrap" id="successor-wrap"></div>
+  </div>
+
+  <!-- ③ スキル喪失リスク -->
+  <div class="section-label">③ スキル・知識の喪失リスク</div>
+  <div class="section">
+    <div class="wf-wrap" id="skill-wrap"></div>
+  </div>
+
+
+
+  <!-- ② 後継者不在リスク -->
+  <div class="section-label">② 後継者・後任不在リスク</div>
+  <div class="section">
+    <div class="wf-wrap" id="successor-wrap"></div>
+  </div>
+
+  <!-- ③ スキル喪失リスク -->
+  <div class="section-label">③ スキル・知識の喪失リスク</div>
+  <div class="section">
+    <div class="wf-wrap" id="skill-wrap"></div>
+  </div>
+
+</div>`;
+}
+
+// ══════════════════════════════
+//  INIT
+// ══════════════════════════════
+function init(){
+  // grid filter
+  const s=document.getElementById('g-dept-filter');
+  s.innerHTML='<option value="">全部署</option>'+TOP_DEPTS.map(d=>`<option value="${d}">${d}</option>`).join('');
+  renderGrid();
+}
+init();
+
+
+// ══════════════════════════════
+//  STORY TAB JS
+// ══════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
+function getTeinen(){return +document.getElementById('teinen').value||65;}
+function getOffset(){return +document.getElementById('yr-slider').value||0;}
+
+// 各年の退職者数（その年に定年を迎える人）
+function retiresInYear(offset){
+  const t=getTeinen();
+  return EMPLOYEES.filter(e=>e.age+offset>=t&&e.age+offset-1<t).length;
+}
+// 累計退職者
+function totalRetired(offset){
+  const t=getTeinen();
+  return EMPLOYEES.filter(e=>e.age+offset>=t).length;
+}
+function activeCount(offset){return EMPLOYEES.length-totalRetired(offset);}
+
+function onStorySlider(){
+  const off=getOffset();
+  const yr=BASE_YEAR+off;
+  document.getElementById('yr-disp').innerHTML=yr+'<span class="yr-suffix">年</span>';
+  document.getElementById('yr-note').textContent=off===0?'現在の状態を表示中':BASE_YEAR+'年から'+off+'年後の推計';
+  renderStory();
+}
+
+// ── KPI ──
+function renderStoryKPI(){
+  const off=getOffset();
+  const yr=BASE_YEAR+off;
+  const t=getTeinen();
+  const act=activeCount(off);
+  const act0=EMPLOYEES.length;
+  const retN=totalRetired(off);
+  const thisYrRet=retiresInYear(off);
+  const active=EMPLOYEES.map(e=>{const ca=e.age+off;return{...e,ca};
+  }).filter(e=>e.ca<t);
+  const avg=active.length?(active.reduce((s,e)=>s+e.ca,0)/active.length).toFixed(1):'—';
+  const avg0=(EMPLOYEES.reduce((s,e)=>s+e.age,0)/EMPLOYEES.length).toFixed(1);
+  const u30=active.filter(e=>e.ca<30).length;
+  const u30_0=EMPLOYEES.filter(e=>e.age<30).length;
+  const deltaAct=act-act0;
+  const deltaAvg=(+avg-+avg0).toFixed(1);
+  const deltaU30=u30-u30_0;
+  document.getElementById('kpi-grid').innerHTML=
+    kpiCard('k-total','在籍人数',act,'名',deltaAct,off)
+    +kpiCard('k-retire','累計退職者',retN,'名',retN>0?retN:0,off,true)
+    +kpiCard('k-avg','平均年齢',avg,'歳',deltaAvg,off,false,true)
+    +kpiCard('k-young','30歳未満',u30,'名',deltaU30,off);
+}
+function kpiCard(cls,label,val,unit,delta,off,invertColor,isFloat){
+  let deltaHtml='';
+  if(off>0){
+    const d=+delta;
+    const cls2=invertColor?(d>0?'neg':'pos'):(d<0?'neg':d>0?'pos':'neu');
+    const sign=d>0?'+':'';
+    deltaHtml='<div class="kpi-delta '+cls2+'">'+sign+delta+unit+' vs 2025年</div>';
+  }
+  return '<div class="kpi '+cls+'"><div class="kpi-label">'+label+'</div><div class="kpi-val">'+val+'<span class="unit">'+unit+'</span></div>'+deltaHtml+'</div>';
+}
+
+// ── LINE CHART (旧waterfall) ──
+function renderWaterfall(){
+  const years=[0,1,2,3,4,5,6,7,8,9,10];
+  const data=years.map(y=>({y,yr:BASE_YEAR+y,act:activeCount(y),ret:retiresInYear(y)}));
+  drawLineChart(data,null);
+}
+
+function drawLineChart(data,proposal){
+  const off=getOffset();
+  const W=800,H=190;
+  const pad={t:28,r:24,b:44,l:52};
+  const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+  // 採用込みの値も含めてY軸レンジを計算
+  const vals=data.map(d=>d.act);
+  let allVals=[...vals];
+  if(proposal){
+    let run=data[0].act;
+    data.forEach((d,i)=>{
+      if(i===0){allVals.push(run);return;}
+      run=run-d.ret+(proposal.find(p=>p.y===d.y)||{total:0}).total;
+      allVals.push(run);
+    });
+  }
+  const minN=Math.floor(Math.min(...allVals)*0.95);
+  const maxN=Math.ceil(Math.max(...allVals)*1.03);
+  function tx(i){return pad.l+i/10*iW;}
+  function ty(n){return pad.t+iH-(n-minN)/(maxN-minN)*iH;}
+
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:100%;" xmlns="http://www.w3.org/2000/svg">'
+    +'<defs>'
+    +'<linearGradient id="lgB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#58a6ff" stop-opacity="0.2"/><stop offset="100%" stop-color="#58a6ff" stop-opacity="0"/></linearGradient>'
+    +'<linearGradient id="lgG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3fb950" stop-opacity="0.15"/><stop offset="100%" stop-color="#3fb950" stop-opacity="0"/></linearGradient>'
+    +'</defs>';
+
+  // グリッド
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const v=Math.round(minN+(maxN-minN)*i/steps);
+    const y=ty(v);
+    svg+='<line x1="'+pad.l+'" y1="'+y+'" x2="'+(pad.l+iW)+'" y2="'+y+'" stroke="#30363d" stroke-width="0.8"/>';
+    svg+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#7d8590">'+v+'</text>';
+  }
+
+  // 在籍ライン（採用なし）
+  const bPath=data.map((d,i)=>(i?'L':'M')+tx(i)+','+ty(d.act)).join(' ');
+  svg+='<path d="'+bPath+' L'+tx(10)+','+(pad.t+iH)+' L'+pad.l+','+(pad.t+iH)+' Z" fill="url(#lgB)"/>';
+  svg+='<path d="'+bPath+'" fill="none" stroke="#58a6ff" stroke-width="2.5" stroke-linejoin="round"/>';
+
+  // 採用込みライン
+  if(proposal){
+    let run=data[0].act;
+    const wh=data.map((d,i)=>{
+      if(i===0)return run;
+      run=run-d.ret+(proposal.find(p=>p.y===d.y)||{total:0}).total;
+      return run;
+    });
+    const gPath=wh.map((n,i)=>(i?'L':'M')+tx(i)+','+ty(n)).join(' ');
+    svg+='<path d="'+gPath+' L'+tx(10)+','+(pad.t+iH)+' L'+pad.l+','+(pad.t+iH)+' Z" fill="url(#lgG)"/>';
+    svg+='<path d="'+gPath+'" fill="none" stroke="#3fb950" stroke-width="2.5" stroke-linejoin="round" stroke-dasharray="6,3"/>';
+    wh.forEach((n,i)=>{
+      const isOff=(i===off);
+      if(i===0||i===5||i===10||isOff){
+        svg+='<circle cx="'+tx(i)+'" cy="'+ty(n)+'" r="'+(isOff?5:3)+'" fill="#3fb950" stroke="#0d1117" stroke-width="1.5"/>';
+        svg+='<text x="'+tx(i)+'" y="'+(ty(n)-10)+'" text-anchor="middle" font-size="10" fill="#3fb950">'+Math.round(n)+'</text>';
+      }
+    });
+  }
+
+  // 在籍ドット＆ラベル
+  data.forEach((d,i)=>{
+    const isOff=(i===off);
+    const show=i===0||i===5||i===10||isOff;
+    if(show){
+      svg+='<circle cx="'+tx(i)+'" cy="'+ty(d.act)+'" r="'+(isOff?5:3)+'" fill="'+(isOff?'#d4a017':'#58a6ff')+'" stroke="#0d1117" stroke-width="1.5"/>';
+      const labelY=ty(d.act)-(proposal?20:10);
+      svg+='<text x="'+tx(i)+'" y="'+labelY+'" text-anchor="middle" font-size="10" font-weight="'+(isOff?'bold':'normal')+'" fill="'+(isOff?'#d4a017':'#79c0ff')+'">'+d.act+'名</text>';
+    }
+  });
+
+  // 選択年縦線
+  svg+='<line x1="'+tx(off)+'" y1="'+pad.t+'" x2="'+tx(off)+'" y2="'+(pad.t+iH)+'" stroke="#d4a017" stroke-width="1" stroke-dasharray="4,3"/>';
+
+  // X軸ラベル＋退職数
+  data.forEach((d,i)=>{
+    const isOff=(i===off);
+    const show=i===0||i===5||i===10||isOff;
+    if(show){
+      svg+='<text x="'+tx(i)+'" y="'+(pad.t+iH+15)+'" text-anchor="middle" font-size="'+(isOff?11:10)+'" font-weight="'+(isOff?'bold':'normal')+'" fill="'+(isOff?'#d4a017':'#7d8590')+'">'+(i===0?'現在':d.yr)+'</text>';
+      if(d.ret>0){
+        const rc=d.ret>=10?'#f85149':d.ret>=5?'#f0883e':'#7d8590';
+        svg+='<text x="'+tx(i)+'" y="'+(pad.t+iH+30)+'" text-anchor="middle" font-size="9" fill="'+rc+'">▼'+d.ret+'名</text>';
+      }
+    }
+  });
+
+  svg+='</svg>';
+  document.getElementById('wf-chart').innerHTML=svg;
+}
+
+
+// ── PYRAMID ──
+function renderPyramid(){
+  const off=getOffset();
+  const t=getTeinen();
+  const bands=[
+    ['60歳以上',60,999],
+    ['50代',50,59],
+    ['40代',40,49],
+    ['30代',30,39],
+    ['20代',20,29],
+  ];
+
+  // 現在（2025年）
+  const now=bands.map(([l,mn,mx])=>EMPLOYEES.filter(e=>e.age>=mn&&e.age<=mx&&e.age<t).length);
+
+  // 選択年（退職のみ、採用なし）
+  const sel=bands.map(([l,mn,mx])=>EMPLOYEES.map(e=>e.age+off).filter(ca=>ca>=mn&&ca<=mx&&ca<t).length);
+
+  // 採用計画の累計加算（off年分まで）
+  const proposal=calcHiringProposal();
+  const hireByBand={60:0,50:0,40:0,30:0,20:0};
+  proposal.filter(p=>p.y<=off&&p.y>0).forEach(p=>{
+    hireByBand[20]+=(p.byGrp['general']||0);
+    hireByBand[30]+=(p.byGrp['kacho']||0);
+    hireByBand[40]+=(p.byGrp['jicho']||0)+(p.byGrp['bucho']||0)+(p.byGrp['executive']||0);
+  });
+  const addN=bands.map(([l,mn])=>hireByBand[mn]||0);
+  const withHire=sel.map((n,i)=>n+addN[i]);
+
+  // maxNはすべてのバーの最大値
+  const maxN=Math.max(...now,...withHire,1);
+
+  document.getElementById('pyr-sub').textContent=
+    off===0
+      ?'現在の年齢構成（スライダーを動かすと変化が見えます）'
+      :'2026年（青）vs '+(BASE_YEAR+off)+'年 採用なし（金）/ 採用込み（金＋緑）';
+
+  // SVGベースで描画（幅は%指定で安定）
+  const BAR_H=20;
+  const GAP=6;
+  const LABEL_W=60;
+  const totalH=bands.length*(BAR_H+GAP);
+
+  // パーセントで幅を計算（最大45%）
+  function pct(n){ return Math.max(n/maxN*45,n>0?1:0).toFixed(1); }
+
+  let html='<div style="width:100%;font-size:0;">';
+  bands.forEach(([label,mn,mx],i)=>{
+    const nPct=pct(now[i]);
+    const sPct=pct(sel[i]);
+    const aPct=pct(addN[i]);
+
+    html+='<div style="display:flex;align-items:center;height:'+(BAR_H+GAP)+'px;">';
+
+    // 左：現在（右寄せ）
+    html+='<div style="flex:1;display:flex;justify-content:flex-end;align-items:center;padding-right:4px;">';
+    if(now[i]>0){
+      html+='<div style="width:'+nPct+'%;min-width:2px;height:'+BAR_H+'px;background:#58a6ff22;border:1.5px solid var(--blue);border-radius:3px 0 0 3px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;">'
+        +'<span style="font-size:10px;color:#79c0ff;font-variant-numeric:tabular-nums;white-space:nowrap;">'+now[i]+'名</span>'
+        +'</div>';
+    } else {
+      html+='<span style="font-size:10px;color:var(--text-dim);">0</span>';
+    }
+    html+='</div>';
+
+    // 中央ラベル
+    html+='<div style="width:'+LABEL_W+'px;text-align:center;font-size:10px;color:var(--text-muted);flex-shrink:0;">'+label+'</div>';
+
+    // 右：選択年ベース（金）＋採用追加分（緑）
+    html+='<div style="flex:1;display:flex;align-items:center;padding-left:4px;">';
+    if(sel[i]>0||addN[i]>0){
+      // ベースバー
+      if(sel[i]>0){
+        html+='<div style="width:'+sPct+'%;min-width:2px;height:'+BAR_H+'px;background:rgba(212,160,23,0.35);border:1.5px solid var(--gold);'+(addN[i]>0?'border-right:none;border-radius:3px 0 0 3px;':'border-radius:3px 0 0 3px;')+' display:flex;align-items:center;padding-left:5px;flex-shrink:0;">'
+          +'<span style="font-size:10px;color:var(--gold);font-variant-numeric:tabular-nums;white-space:nowrap;">'+sel[i]+'名</span>'
+          +'</div>';
+      }
+      // 採用追加バー
+      if(addN[i]>0){
+        html+='<div style="width:'+aPct+'%;min-width:6px;height:'+BAR_H+'px;background:rgba(63,185,80,0.35);border:1.5px solid var(--green);border-left:none;border-radius:0 3px 3px 0;display:flex;align-items:center;padding-left:4px;flex-shrink:0;">'
+          +'<span style="font-size:10px;color:#7ee787;font-variant-numeric:tabular-nums;white-space:nowrap;">+'+addN[i]+'</span>'
+          +'</div>';
+      }
+    } else {
+      html+='<span style="font-size:10px;color:var(--text-dim);">0</span>';
+    }
+    html+='</div>';
+
+    html+='</div>';
+  });
+  html+='</div>';
+
+  document.getElementById('pyramid-chart').innerHTML=html;
+}
+
+// ── DEPT RISK TABLE ──
+function renderRiskTable(){
+  const t=getTeinen();
+  const years=[1,2,3,4,5,6,7,8,9,10];
+  const depts=TOP_DEPTS.filter(d=>EMPLOYEES.some(e=>e.topDept===d));
+
+  // 部署×年の退職者数マトリクス
+  const matrix={};
+  depts.forEach(d=>{
+    matrix[d]={};
+    years.forEach(y=>{
+      matrix[d][y]=EMPLOYEES.filter(e=>e.topDept===d&&e.age+y>=t&&e.age+y-1<t).length;
+    });
+  });
+
+  // リスクスコア（5年以内の退職合計）で並び替え
+  const sorted=[...depts].sort((a,b)=>{
+    const sa=years.slice(0,5).reduce((s,y)=>s+matrix[a][y],0);
+    const sb=years.slice(0,5).reduce((s,y)=>s+matrix[b][y],0);
+    return sb-sa;
+  });
+
+  function riskClass(n){
+    if(n===0)return 'rc-none';
+    if(n<=2)return 'rc-low';
+    if(n<=4)return 'rc-mid';
+    if(n<=6)return 'rc-high';
+    return 'rc-critical';
+  }
+
+  const off=getOffset();
+
+  let th='<thead><tr><th class="dept-col" style="position:sticky;left:0;background:var(--surface);z-index:5;">部署</th>';
+  years.forEach(y=>{
+    const isNow=(y===off);
+    th+='<th style="'+(isNow?'color:var(--gold);':'')+'">'+( BASE_YEAR+y)+'</th>';
+  });
+  th+='<th style="border-left:1px solid var(--border);">5年計</th></tr></thead>';
+
+  let tb='<tbody>';
+  sorted.slice(0,15).forEach(d=>{
+    const total5=years.slice(0,5).reduce((s,y)=>s+matrix[d][y],0);
+    if(total5===0&&years.reduce((s,y)=>s+matrix[d][y],0)===0)return;
+    tb+='<tr>';
+    tb+='<td class="dept-name" style="position:sticky;left:0;background:var(--surface);z-index:4;">'+d+'</td>';
+    years.forEach(y=>{
+      const n=matrix[d][y];
+      const isNow=(y===off);
+      tb+='<td style="'+(isNow?'background:var(--gold-dim);':'')+'">'
+        +(n>0?'<span class="risk-cell '+riskClass(n)+'">'+n+'</span>':'<span class="rc-none">—</span>')
+        +'</td>';
+    });
+    tb+='<td style="border-left:1px solid var(--border);font-weight:700;color:'+(total5>=10?'var(--red)':total5>=5?'var(--orange)':'var(--text-muted)')+';">'
+      +(total5>0?total5+'名':'—')+'</td>';
+    tb+='</tr>';
+  });
+  tb+='</tbody>';
+
+  document.getElementById('risk-table').innerHTML=th+tb;
+}
+
+// ── TREND LINE ──
+
+// ── MAIN RENDER ──
+function renderStory(){
+  renderStoryKPI();
+  renderHiringProposal();
+  renderPyramid();
+  renderRiskTable();
+  renderSuccessorRisk();
+  renderSkillRisk();
+}
+
+// init
+// story init called from showMainTab
+
+
+
+// ══════════════════════════════
+//  ② 後継者不在リスク
+// ══════════════════════════════
+function renderSuccessorRisk(){
+  const t=getTeinen();
+  // 3年以内に退職する管理職を部署別に抽出
+  const riskMgmt=EMPLOYEES.filter(e=>e.age>=t-3&&e.age<t&&['executive','bucho','jicho','kacho'].includes(getRoleGroup(e.roleStr)));
+
+  // 各部署で後継候補（同じ役職より1ランク下、かつ退職3年以上後）がいるか
+  const grpRank={executive:4,bucho:3,jicho:2,kacho:1,general:0};
+
+  const deptRisks=[];
+  const checkedDepts=new Set();
+
+  riskMgmt.forEach(e=>{
+    const key=e.topDept+'__'+getRoleGroup(e.roleStr);
+    if(checkedDepts.has(key))return;
+    checkedDepts.add(key);
+
+    const myRank=grpRank[getRoleGroup(e.roleStr)]||0;
+    // 後継候補：同部署で1ランク下、かつ5年後も在籍
+    const candidates=EMPLOYEES.filter(c=>{
+      if(c.topDept!==e.topDept)return false;
+      const cRank=grpRank[getRoleGroup(c.roleStr)]||0;
+      return cRank===myRank-1&&c.age+5<t;
+    });
+    deptRisks.push({
+      dept:e.topDept,role:getRoleGroup(e.roleStr),
+      retiring:e,candidates:candidates.length,
+      risk:candidates.length===0?'critical':candidates.length===1?'high':'ok'
+    });
+  });
+
+  // リスク順にソート
+  const sorted=deptRisks.sort((a,b)=>{
+    const o={critical:0,high:1,ok:2};
+    return o[a.risk]-o[b.risk];
+  });
+
+  const riskLabel={critical:'後継者なし',high:'候補1名のみ',ok:'候補あり'};
+  const riskColor={critical:'var(--red)',high:'var(--orange)',ok:'var(--green)'};
+  const riskBg={critical:'#f8514922',high:'#f0883e22',ok:'#3fb95022'};
+
+  let html='<div class="proposal-title" style="margin-bottom:14px;">'
+    +'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="4" r="2.5" stroke="#f85149" stroke-width="1.5"/><path d="M2 12c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="#f85149" stroke-width="1.5" stroke-linecap="round"/></svg>'
+    +' 定年3年以内の管理職と後継者状況</div>';
+
+  if(sorted.length===0){
+    html+='<div style="color:var(--text-muted);font-size:12px;">3年以内に定年を迎える管理職はいません。</div>';
+  } else {
+    html+='<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+      +'<thead><tr>'
+      +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:left;">部署</th>'
+      +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:left;">退職予定の役職</th>'
+      +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">退職まで</th>'
+      +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">後継候補数</th>'
+      +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">判定</th>'
+      +'</tr></thead><tbody>';
+
+    sorted.forEach(d=>{
+      const yearsLeft=t-d.retiring.age;
+      html+='<tr style="background:'+riskBg[d.risk]+';">'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;font-weight:500;color:var(--text);">'+d.dept+'</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;color:var(--text-muted);">'+ROLE_GROUP_LABELS[d.role]+'</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;font-family:monospace;color:var(--orange);">約'+yearsLeft+'年</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;font-weight:700;color:'+riskColor[d.risk]+';">'+d.candidates+'名</td>'
+        +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;">'
+        +'<span style="background:'+riskBg[d.risk]+';color:'+riskColor[d.risk]+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;border:1px solid '+riskColor[d.risk]+';">'+riskLabel[d.risk]+'</span>'
+        +'</td>'
+        +'</tr>';
+    });
+    html+='</tbody></table>';
+
+    const critical=sorted.filter(d=>d.risk==='critical').length;
+    const high=sorted.filter(d=>d.risk==='high').length;
+    html+='<div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">'
+      +'<div style="background:#f8514922;border:1px solid var(--red);border-radius:6px;padding:8px 14px;font-size:11px;">'
+      +'<span style="color:var(--red);font-weight:700;">● 後継者なし：'+critical+'件</span></div>'
+      +'<div style="background:#f0883e22;border:1px solid var(--orange);border-radius:6px;padding:8px 14px;font-size:11px;">'
+      +'<span style="color:var(--orange);font-weight:700;">● 候補1名のみ：'+high+'件</span></div>'
+      +'</div>';
+  }
+  html+='<div style="font-size:10px;color:var(--text-dim);margin-top:8px;">※ 後継候補＝同部署で1ランク下の役職かつ5年後も在籍見込みの人員。</div>';
+
+  document.getElementById('successor-wrap').innerHTML=html;
+}
+
+// ══════════════════════════════
+//  ③ スキル喪失リスク
+// ══════════════════════════════
+function renderSkillRisk(){
+  const t=getTeinen();
+  // ベテラン定義：勤続15年以上 かつ 定年10年以内
+  const veterans=EMPLOYEES.filter(e=>e.tenure>=15&&e.age>=t-10&&e.age<t);
+
+  // 部署別に集計
+  const byDept={};
+  veterans.forEach(e=>{
+    if(!byDept[e.topDept])byDept[e.topDept]={total:0,retire3y:0,totalTenure:0,maxTenure:0};
+    byDept[e.topDept].total++;
+    if(e.age>=t-3)byDept[e.topDept].retire3y++;
+    byDept[e.topDept].totalTenure+=e.tenure;
+    byDept[e.topDept].maxTenure=Math.max(byDept[e.topDept].maxTenure,e.tenure);
+  });
+
+  const sorted=Object.entries(byDept)
+    .map(([dept,d])=>({dept,...d,avgTenure:Math.round(d.totalTenure/d.total)}))
+    .sort((a,b)=>b.retire3y-a.retire3y||b.total-a.total);
+
+  let html='<div class="proposal-title" style="margin-bottom:14px;">'
+    +'<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.5 4h4l-3.5 2.5 1.5 4L7 9l-3.5 2.5 1.5-4L1 5h4z" stroke="#e3b341" stroke-width="1.2" stroke-linejoin="round"/></svg>'
+    +' 部署別 ベテラン人材の喪失リスク（勤続15年以上）</div>';
+
+  // 全社サマリー
+  const totalVet=veterans.length;
+  const retire3yVet=veterans.filter(e=>e.age>=t-3).length;
+  const avgTenureAll=totalVet?Math.round(veterans.reduce((s,e)=>s+e.tenure,0)/totalVet):0;
+
+  html+='<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+    +'<div style="flex:1;min-width:100px;background:#21262d;border-radius:8px;padding:10px 14px;">'
+    +'<div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">対象ベテラン</div>'
+    +'<div style="font-size:22px;font-weight:700;color:var(--text);">'+totalVet+'<span style="font-size:12px;color:var(--text-dim);">名</span></div></div>'
+    +'<div style="flex:1;min-width:100px;background:#f8514922;border:1px solid var(--red);border-radius:8px;padding:10px 14px;">'
+    +'<div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">3年以内に退職</div>'
+    +'<div style="font-size:22px;font-weight:700;color:var(--red);">'+retire3yVet+'<span style="font-size:12px;color:var(--text-dim);">名</span></div></div>'
+    +'<div style="flex:1;min-width:100px;background:#21262d;border-radius:8px;padding:10px 14px;">'
+    +'<div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;">平均勤続年数</div>'
+    +'<div style="font-size:22px;font-weight:700;color:var(--gold);">'+avgTenureAll+'<span style="font-size:12px;color:var(--text-dim);">年</span></div></div>'
+    +'</div>';
+
+  // 部署別テーブル
+  html+='<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+    +'<thead><tr>'
+    +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:left;">部署</th>'
+    +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">ベテラン数</th>'
+    +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">3年以内退職</th>'
+    +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">平均勤続</th>'
+    +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">最長勤続</th>'
+    +'<th style="padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text-dim);font-weight:500;text-align:center;">リスク度</th>'
+    +'</tr></thead><tbody>';
+
+  sorted.forEach(d=>{
+    const risk=d.retire3y>=3?'critical':d.retire3y>=1?'high':d.total>=5?'mid':'low';
+    const riskLabel={critical:'緊急',high:'高',mid:'中',low:'低'};
+    const riskColor={critical:'var(--red)',high:'var(--orange)',mid:'var(--gold)',low:'var(--green)'};
+    const riskBg={critical:'#f8514922',high:'#f0883e22',mid:'#e3b34122',low:'#3fb95022'};
+    html+='<tr>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;font-weight:500;color:var(--text);">'+d.dept+'</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;color:var(--text);">'+d.total+'名</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;font-weight:'+(d.retire3y>0?'700':'400')+';color:'+(d.retire3y>0?'var(--red)':'var(--text-dim)')+';">'+d.retire3y+'名</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;color:var(--gold);">'+d.avgTenure+'年</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;color:var(--text-muted);">'+d.maxTenure+'年</td>'
+      +'<td style="padding:5px 8px;border-bottom:1px solid #21262d;text-align:center;">'
+      +'<span style="background:'+riskBg[risk]+';color:'+riskColor[risk]+';padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;border:1px solid '+riskColor[risk]+';">'+riskLabel[risk]+'</span>'
+      +'</td></tr>';
+  });
+  html+='</tbody></table>';
+  html+='<div style="font-size:10px;color:var(--text-dim);margin-top:8px;">※ ベテラン＝勤続15年以上かつ定年10年以内の在籍者。リスク度は3年以内退職者数と在籍数に基づく。</div>';
+
+  document.getElementById('skill-wrap').innerHTML=html;
+}
+
+// ══════════════════════════════
+//  採用計画提案
+// ══════════════════════════════
+let hireMode='maintain';
+function setHireMode(mode,el){
+  hireMode=mode;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  renderHiringProposal();
+}
+
+function calcHiringProposal(){
+  const t=getTeinen();
+  const years=[1,2,3,4,5,6,7,8,9,10];
+  const total=EMPLOYEES.length;
+  const active0=EMPLOYEES.filter(e=>e.age<t).length;
+
+  // 現在の役職比率
+  const grpKeys=['executive','bucho','jicho','kacho','general'];
+  const grpLabels={executive:'役員・執行役員',bucho:'部長・支店長',jicho:'次長・室長',kacho:'課長',general:'一般・その他'};
+  const grpColors={executive:'#f85149',bucho:'#79c0ff',jicho:'#7ee787',kacho:'#e3b341',general:'#a0aec0'};
+
+  // 各モードのパラメータ
+  const modes={
+    maintain:{ desc:'退職者数を補充し、現在の人員規模・役職バランスを維持する計画です。',
+      targetTotal:active0, youngBoost:0, mgmtBoost:0, leadtime:1 },
+    young:   { desc:'退職補充に加え、若手（一般職）を積極採用して年齢構成を若返らせる計画です。30歳未満比率を現状より+5%改善することを目標にします。',
+      targetTotal:Math.round(active0*1.03), youngBoost:0.4, mgmtBoost:0, leadtime:1 },
+    mgmt:    { desc:'管理職・即戦力クラス（課長以上）の補充を優先し、マネジメント層の薄さを解消する計画です。',
+      targetTotal:active0, youngBoost:0, mgmtBoost:0.4, leadtime:0 },
+  };
+  const mp=modes[hireMode];
+
+  return years.map(y=>{
+    // その年の退職者（役職別）
+    const retirees=EMPLOYEES.filter(e=>e.age+y>=t&&e.age+y-1<t);
+    const byGrp={};
+    grpKeys.forEach(g=>{byGrp[g]=retirees.filter(e=>getRoleGroup(e.roleStr)===g).length;});
+
+    // 基本補充：退職者数をそのまま補充
+    const base={...byGrp};
+
+    // モード別加減算
+    if(hireMode==='young'){
+      // 若手ブースト: 退職補充に加えて一般職を追加
+      const extra=Math.max(0,Math.round(mp.targetTotal*0.02));
+      base['general']=(base['general']||0)+extra;
+    } else if(hireMode==='mgmt'){
+      // 管理職ブースト: 課長・次長の補充を+30%増
+      ['kacho','jicho'].forEach(g=>{
+        base[g]=Math.ceil((base[g]||0)*1.3);
+      });
+      // 一般は退職のみ補充
+    }
+
+    // リードタイムを考慮（即戦力モードは翌年採用、それ以外は当年）
+    const total=grpKeys.reduce((s,g)=>s+(base[g]||0),0);
+    return{y,yr:BASE_YEAR+y,byGrp:base,total,retirees:retirees.length};
+  });
+}
+
+function renderHiringProposal(){
+  const proposal=calcHiringProposal();
+  const grpKeys=['executive','bucho','jicho','kacho','general'];
+  const grpLabels={executive:'役員',bucho:'部長・支店長',jicho:'次長・室長',kacho:'課長',general:'一般'};
+  const grpColors={executive:'#f85149',bucho:'#79c0ff',jicho:'#7ee787',kacho:'#e3b341',general:'#a0aec0'};
+
+  function hireClass(n){
+    if(!n)return 'hire-0';
+    if(n<=2)return 'hire-low';
+    if(n<=5)return 'hire-mid';
+    return 'hire-high';
+  }
+
+  // ヘッダー
+  let th='<tr><th class="yr-col">年度</th>';
+  grpKeys.forEach(g=>{ th+='<th><span style="color:'+grpColors[g]+';font-size:9px;">●</span> '+grpLabels[g]+'</th>'; });
+  th+='<th>採用計</th><th>退職数</th><th>純増減</th></tr>';
+
+  // 行
+  let rows='';
+  const totals={};grpKeys.forEach(g=>{totals[g]=0;});
+  let totalHire=0, totalRetire=0;
+
+  proposal.forEach(p=>{
+    const rowTotal=p.total;
+    const net=rowTotal-p.retirees;
+    totalHire+=rowTotal; totalRetire+=p.retirees;
+    grpKeys.forEach(g=>{totals[g]+=(p.byGrp[g]||0);});
+    rows+='<tr>';
+    rows+='<td class="yr-label">'+p.yr+'年</td>';
+    grpKeys.forEach(g=>{
+      const n=p.byGrp[g]||0;
+      rows+='<td>'+(n>0?'<span class="hire-num '+hireClass(n)+'">'+n+'</span>':'<span class="hire-0">—</span>')+'</td>';
+    });
+    rows+='<td><strong style="color:var(--green);">'+rowTotal+'</strong></td>';
+    rows+='<td style="color:var(--red);">'+p.retirees+'</td>';
+    const netCls=net>0?'net-pos':net<0?'net-neg':'net-zero';
+    rows+='<td class="'+netCls+'">'+(net>0?'+':'')+net+'</td>';
+    rows+='</tr>';
+  });
+
+  // 合計行
+  const grandNet=totalHire-totalRetire;
+  const grandNetCls=grandNet>0?'net-pos':grandNet<0?'net-neg':'net-zero';
+  rows+='<tr class="proposal-total-row">';
+  rows+='<td class="yr-label" style="color:var(--text);">10年合計</td>';
+  grpKeys.forEach(g=>{ rows+='<td><strong style="color:'+grpColors[g]+';">'+totals[g]+'</strong></td>'; });
+  rows+='<td><strong style="color:var(--green);font-size:13px;">'+totalHire+'</strong></td>';
+  rows+='<td style="color:var(--red);font-weight:700;">'+totalRetire+'</td>';
+  rows+='<td class="'+grandNetCls+'" style="font-size:13px;">'+(grandNet>0?'+':'')+grandNet+'</td>';
+  rows+='</tr>';
+
+  document.getElementById('proposal-table-wrap').innerHTML=
+    '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
+    +'<table class="proposal-table"><thead>'+th+'</thead><tbody>'+rows+'</tbody></table>'
+    +'</div>';
+
+  // 注記
+  // 現況データを計算して説明文に組み込む
+  const t2=getTeinen();
+  const activeNow=EMPLOYEES.filter(e=>e.age<t2).length;
+  const under30Now=EMPLOYEES.filter(e=>e.age<30).length;
+  const over50Now=EMPLOYEES.filter(e=>e.age>=50&&e.age<t2).length;
+  const under30Pct=Math.round(under30Now/activeNow*100);
+  const over50Pct=Math.round(over50Now/activeNow*100);
+  const retire5y=EMPLOYEES.filter(e=>e.age+5>=t2&&e.age<t2).length;
+  const retire10y=EMPLOYEES.filter(e=>e.age+10>=t2&&e.age<t2).length;
+  // 管理職数
+  const mgmtNow=EMPLOYEES.filter(e=>['executive','bucho','jicho','kacho'].includes(getRoleGroup(e.roleStr))&&e.age<t2).length;
+  const mgmtRetire5y=EMPLOYEES.filter(e=>e.age+5>=t2&&e.age<t2&&['executive','bucho','jicho','kacho'].includes(getRoleGroup(e.roleStr))).length;
+  // 若手採用の追加数（youngモード）
+  const youngExtra=proposal.reduce((s,p)=>s+(p.byGrp['general']||0),0)-proposal.reduce((s,p)=>s+(EMPLOYEES.filter(e=>e.age+p.y>=t2&&e.age+p.y-1<t2&&getRoleGroup(e.roleStr)==='general').length),0);
+  // 管理職採用の増分（mgmtモード）
+  const mgmtExtra=Math.round(proposal.reduce((s,p)=>s+(p.byGrp['kacho']||0)+(p.byGrp['jicho']||0),0)*0.3);
+
+  const noteStyle='line-height:1.9;font-size:11px;';
+  // 年平均採用数
+  const avgHire=Math.round(totalHire/10*10)/10;
+  // 若手モードの年ごとの上乗せ数（在籍数の2%）
+  const youngExtraPerYear=Math.max(0,Math.round(activeNow*1.03*0.02));
+  // 管理職モードで増える課長・次長の採用数合計
+  const baseKachoJicho=proposal.reduce((s,p)=>s+Math.round(((p.byGrp['kacho']||0)+(p.byGrp['jicho']||0))/1.3),0);
+  const extraKachoJicho=proposal.reduce((s,p)=>s+(p.byGrp['kacho']||0)+(p.byGrp['jicho']||0),0)-baseKachoJicho;
+
+  const modeNotes={
+    maintain:
+      '<strong style="color:var(--blue);font-size:12px;">現状維持モード — 採用基準</strong><br>'
+      +'<span style="'+noteStyle+'">'
+      +'<strong>基本ルール：</strong>各年度に定年退職する人数を、同じ役職グループで1対1補充します。<br>'
+      +'　例）2027年に課長が2名退職 → 課長クラスを2名採用<br>'
+      +'<strong>採用総数：</strong>10年間で計 <strong style="color:var(--green);">'+totalHire+'名</strong>（年平均 '+avgHire+'名）<br>'
+      +'<strong>対象退職者：</strong>10年間で'+retire10y+'名が定年予定。そのまま全員を補充する計算です。<br>'
+      +'役職グループ・年度別の内訳は上表をご参照ください。'
+      +'</span>',
+
+    young:
+      '<strong style="color:var(--green);font-size:12px;">若手強化モード — 採用基準</strong><br>'
+      +'<span style="'+noteStyle+'">'
+      +'<strong>基本ルール（現状維持と同じ）：</strong>各年度の退職者を同役職グループで1対1補充。<br>'
+      +'<strong>上乗せルール（若手強化分）：</strong>毎年、在籍人数目標（'+Math.round(activeNow*1.03)+'名）の2%にあたる <strong style="color:var(--green);">'+youngExtraPerYear+'名</strong> を一般職として追加採用します。<br>'
+      +'　→ 退職補充とは別に、毎年'+youngExtraPerYear+'名の新卒・若手枠を設ける計算です。<br>'
+      +'<strong>採用総数：</strong>10年間で計 <strong style="color:var(--green);">'+totalHire+'名</strong>（年平均 '+avgHire+'名）<br>'
+      +'<strong>内訳：</strong>退職補充分 '+(totalHire-youngExtraPerYear*10)+'名 ＋ 若手上乗せ分 '+(youngExtraPerYear*10)+'名（'+youngExtraPerYear+'名×10年）'
+      +'</span>',
+
+    mgmt:
+      '<strong style="color:var(--orange);font-size:12px;">即戦力重視モード — 採用基準</strong><br>'
+      +'<span style="'+noteStyle+'">'
+      +'<strong>基本ルール（一般職）：</strong>一般職の退職者は1対1補充。<br>'
+      +'<strong>上乗せルール（管理職強化分）：</strong>課長・次長クラスの退職補充数を <strong style="color:var(--orange);">1.3倍（＋30%増）</strong> に引き上げます。<br>'
+      +'　例）課長が3名退職 → 通常3名のところ、切り上げで4名採用<br>'
+      +'<strong>採用総数：</strong>10年間で計 <strong style="color:var(--green);">'+totalHire+'名</strong>（年平均 '+avgHire+'名）<br>'
+      +'<strong>内訳：</strong>通常補充分 '+baseKachoJicho+'名 ＋ 課長・次長の上乗せ分 '+extraKachoJicho+'名（×1.3倍の差分）'
+      +'</span>',
+  };
+  document.getElementById('proposal-note').innerHTML=modeNotes[hireMode]
+    +'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-dim);">※ 本提案は定年退職による欠員補充をベースにした試算です。自己都合退職・異動・組織変更は含みません。採用コスト・市場動向は考慮していません。</div>';
+
+  // ウォーターフォールも採用計画込みで再描画
+  renderWaterfallWithProposal(proposal);
+}
+
+function renderWaterfallWithProposal(proposal){
+  const years=[0,1,2,3,4,5,6,7,8,9,10];
+  const data=years.map(y=>({y,yr:BASE_YEAR+y,act:activeCount(y),ret:retiresInYear(y)}));
+  drawLineChart(data,proposal);
+}
+
+
+</script>
+</body>
+</html>
